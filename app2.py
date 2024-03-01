@@ -41,17 +41,6 @@ def index():
     # Initialize map centered at Harvard's location
     m = folium.Map(location=[42.373611, -71.109733], zoom_start=12)
 
-    # Display vehicle positions
-    vehicle_positions_url = "https://passio3.com/harvard/passioTransit/gtfs/realtime/vehiclePositions.json"
-    vehicle_positions = fetch_data(vehicle_positions_url)
-    vehicle_positions = fetch_data(vehicle_positions_url)
-    if vehicle_positions:
-        # Assuming vehicle_positions is supposed to be a list of dictionaries
-        for vehicle in vehicle_positions:
-            # Make sure that 'vehicle' is a dictionary before trying to use `.get()`
-            if isinstance(vehicle, dict):
-                lat = vehicle.get('latitude') 
-                lon = vehicle.get('longitude')
     # Display stops
     for stop in stops_data:
         folium.Marker(
@@ -65,8 +54,26 @@ def index():
         line_coordinates = [(point['shape_pt_lat'], point['shape_pt_lon']) for point in shape_points]
         folium.PolyLine(line_coordinates, color='green', weight=2.5, opacity=1).add_to(m)
 
+    # Fetch and display vehicle positions
+    vehicle_positions = fetch_data("https://passio3.com/harvard/passioTransit/gtfs/realtime/vehiclePositions.json")
+    
+    if vehicle_positions and 'entity' in vehicle_positions:
+        for entity in vehicle_positions['entity']:
+            vehicle = entity.get('vehicle', {})
+            position = vehicle.get('position', {})
+            lat = position.get('latitude')
+            lon = position.get('longitude')
+            vehicle_id = vehicle.get('vehicle', {}).get('id')
+            if lat and lon:
+                folium.Marker(
+                    [lat, lon],
+                    popup=f"Vehicle ID: {vehicle_id}",
+                    icon=folium.Icon(color='red', icon='bus')
+                ).add_to(m)
+
     # Return the HTML template and embed the map
     return render_template('index.html', map=m._repr_html_())
+
 
 if __name__ == '__main__':
     app.run(debug=True)
