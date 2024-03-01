@@ -1,19 +1,103 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name = "viewport" contexxt = "width = device_width, initial-scale = 1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bus Navigation Platform</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        #map { height: 500px; }
+        #map { 
+            height: 500px; 
+            float: right; /* Float the map to the right */
+            width: 75%; /* Adjust width as needed */
+        }
+        .dropdown {
+            float: left; /* Float the dropdown menu to the left */
+            margin-right: 20px; /* Add margin to separate from the map */
+        }
+        label {
+            display: block; /* Display labels as block elements */
+            margin-bottom: 5px; /* Add margin below labels */
+        }
     </style>
 </head>
 <body>
     <h1>Bus Navigation Platform</h1>
+    
+    <div class="dropdown">
+        <label for="start-stop">Starting Stop:</label>
+        <select id="start-stop">
+            {% for stop_name in stop_names %}
+                <option value="{{ stop_name }}">{{ stop_name }}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <label for="destination-stop">Destination Stop:</label>
+        <select id="destination-stop">
+            {% for stop_name in stop_names %}
+                <option value="{{ stop_name }}">{{ stop_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
     <div id="map">{{ map | safe }}</div>
+    
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Navigation Platform</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map { 
+            height: 500px; 
+            float: right; /* Float the map to the right */
+            width: 60%; /* Adjust width as needed */
+        }
+        .dropdown {
+            float: left; /* Float the dropdown menu to the left */
+            margin-right: 20px; /* Add margin to separate from the map */
+            width: 30%; /* Set dropdown width */
+        }
+        label {
+            display: block; /* Display labels as block elements */
+            margin-bottom: 10px; /* Add margin below labels */
+            font-size: 16px; /* Set font size */
+        }
+        select {
+            width: 100%; /* Set dropdown width to 100% */
+            font-size: 16px; /* Set font size */
+        }
+    </style>
+</head>
+<body>
+    <h1>Bus Navigation Platform</h1>
+    
+    <div class="dropdown">
+        <label for="start-stop">Starting Stop:</label>
+        <select id="start-stop">
+            <option value="" disabled selected>Starting Stop</option> <!-- Placeholder option -->
+            {% for stop_name in stop_names %}
+                <option value="{{ stop_name }}">{{ stop_name }}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <label for="destination-stop">Destination Stop:</label>
+        <select id="destination-stop">
+            <option value="" disabled selected>Destination Stop</option> <!-- Placeholder option -->
+            {% for stop_name in stop_names %}
+                <option value="{{ stop_name }}">{{ stop_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div id="map">{{ map | safe }}</div>
+    
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </body>
 </html>
-
-
