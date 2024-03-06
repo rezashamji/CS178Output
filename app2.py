@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template
 import folium
 import json
@@ -16,7 +15,12 @@ with open('stops.json', 'r') as f:
 with open('shapes.json', 'r') as f:
     shapes_data = json.load(f)
 
-# Function to fetch data from a given URL
+# - The TripUpdates feed and the VehiclePositions feed both reference a trip_id, which references a route_id in trips.txt, which references a route_id in routes.txt.
+# - The VehiclePositions feed shows exactly where the vehicle is and what trip it is on.
+# - The TripUpdates feed shows the ETA for each stop in each active trip (and in some cases, the next trip).
+# - Each entity in the TripUpdates feed represents a vehicle in the VehiclePositions feed and this relationship is established with the trip_id. TripUpdateFeed.entity.trip_update.trip_id == VehiclePositionFeed.entity.vehicle.trip.trip_id
+
+
 def fetch_data(url):
     try:
         response = requests.get(url)
@@ -47,6 +51,11 @@ def index():
             popup=f"{stop['stop_name']}",
             icon=folium.Icon(color='blue', icon='info-sign')
         ).add_to(m)
+
+    # Display routes
+    for shape_id, shape_points in shapes_data.items():
+        line_coordinates = [(point['shape_pt_lat'], point['shape_pt_lon']) for point in shape_points]
+        folium.PolyLine(line_coordinates, color='green', weight=2.5, opacity=1).add_to(m)
 
     # Fetch and display vehicle positions
     vehicle_positions = fetch_data("https://passio3.com/harvard/passioTransit/gtfs/realtime/vehiclePositions.json")
