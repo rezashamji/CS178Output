@@ -124,7 +124,6 @@
 </body>
 </html> -->
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -200,7 +199,7 @@
         <div id="bus-info" class="container"></div>
     </div>
 
-    <div id="map"></div> <!-- Remove {{ map | safe }} -->
+    <div id="map">{{ map | safe }}</div>
     
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -208,72 +207,39 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     
     <script>
-        // Initialize Leaflet map
-        var map = L.map('map').setView([42.373611, -71.109733], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+        // Function to fetch live bus data and update markers on the map
+        function updateBusLocations() {
+            // Fetch live bus data from the server
+            fetch('/get_bus_data')
+            .then(response => response.json())
+            .then(data => {
+                console.log("Bus Data:", data);  // Debug statement to print bus data to console
 
-        // Function to render bus information as cards
-        function renderBusInfo(busInfo) {
-            var busInfoHtml = '';
-            busInfo.forEach(function(info) {
-                busInfoHtml += `
-                <div class="card bus-card">
-                        <div class="card-body">
-                            <h5 class="card-title">Bus ${info.busNumber}</h5>
-                            <p class="card-text">Arrival Time: ${info.arrivalTime}</p>
-                        </div>
-                    </div>
-                `;
-            });
-            $('#bus-info').html(busInfoHtml);
+                // Clear existing bus markers
+                map.eachLayer(layer => {
+                    if (layer.options.icon && layer.options.icon.options.className === 'marker-icon bus-marker') {
+                        map.removeLayer(layer);
+                    }
+                });
+
+                // Add new bus markers based on fetched data
+                data.forEach(bus => {
+                    L.marker([bus.latitude, bus.longitude], {
+                        icon: L.icon({
+                            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            className: 'marker-icon bus-marker'
+                        })
+                    }).addTo(map);
+                });
+            })
+            .catch(error => console.error('Error fetching bus data:', error));
         }
 
-        // Event listener for search button click
-        $('#search-btn').click(function() {
-            // Check if both start and destination stops are selected
-            var startStop = $('#start-stop').val();
-            var destStop = $('#destination-stop').val();
-            if (startStop && destStop) {
-                // Perform search for buses based on selected stops
-                // Need to implement this part to fetch real-time bus information from the server
-                // and update the busInfo array with the fetched data
-                // For now, imma just call the renderBusInfo function to display dummy data ??
-                var busInfo = [
-                    {busNumber: 1, arrivalTime: '09:30 AM'},
-                    {busNumber: 2, arrivalTime: '09:45 AM'},
-                    {busNumber: 3, arrivalTime: '10:00 AM'}
-                ];
-                renderBusInfo(busInfo);
-                $('#bus-info-container').show();
-            } else {
-                alert('Please select both starting and destination stops.');
-            }
-        });
-
-        // Function to update bus positions
-        function updateBusPositions() {
-            // Fetch and update bus positions from the server
-            $.getJSON("https://passio3.com/harvard/passioTransit/gtfs/realtime/vehiclePositions.json", function(data) {
-                if (data && 'entity' in data) {
-                    data['entity'].forEach(function(entity) {
-                        var vehicle = entity['vehicle'];
-                        var position = vehicle['position'];
-                        var lat = position['latitude'];
-                        var lon = position['longitude'];
-                        var vehicle_id = vehicle['id'];
-                        // Add or update bus markers on the map
-                        var busMarker = L.marker([lat, lon]).bindPopup("Vehicle ID: " + vehicle_id);
-                        busMarker.setIcon(L.icon({iconUrl: 'https://cdn.icon-icons.com/icons2/317/PNG/128/bus-icon_34479.png', iconSize: [30, 30]}));
-                        busMarker.addTo(map);
-                    });
-                }
-            });
-        }
-
-        // Call the updateBusPositions function every 5 seconds
-        setInterval(updateBusPositions, 5000);
+        // Call the updateBusLocations function immediately and then every 5 seconds
+        updateBusLocations();
+        setInterval(updateBusLocations, 5000);
     </script>
 </body>
 </html>
