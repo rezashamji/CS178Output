@@ -124,6 +124,7 @@
 </body>
 </html> -->
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -137,8 +138,7 @@
     <style>
         #map { 
             height: calc(100vh - 150px); 
-            width: 50%; 
-            float: right; 
+            width: 100%; 
         }
         .dropdown-container {
             width: 25%; 
@@ -207,22 +207,23 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     
     <script>
-        // Function to fetch live bus data and update markers on the map
+        var map = L.map('map').setView([42.373611, -71.109733], 12);
+        L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://carto.com/">Carto</a>'
+        }).addTo(map);
+
         function updateBusLocations() {
-            // Fetch live bus data from the server
             fetch('/get_bus_data')
             .then(response => response.json())
             .then(data => {
-                console.log("Bus Data:", data);  // Debug statement to print bus data to console
+                console.log("Bus Data:", data); 
 
-                // Clear existing bus markers
                 map.eachLayer(layer => {
                     if (layer.options.icon && layer.options.icon.options.className === 'marker-icon bus-marker') {
                         map.removeLayer(layer);
                     }
                 });
 
-                // Add new bus markers based on fetched data
                 data.forEach(bus => {
                     L.marker([bus.latitude, bus.longitude], {
                         icon: L.icon({
@@ -237,7 +238,6 @@
             .catch(error => console.error('Error fetching bus data:', error));
         }
 
-        // Call the updateBusLocations function immediately and then every 5 seconds
         updateBusLocations();
         setInterval(updateBusLocations, 5000);
     </script>
