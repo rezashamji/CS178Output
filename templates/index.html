@@ -446,8 +446,9 @@
         </div>
         <button id="search-btn" class="btn btn-danger">Search</button>
     </div>
-    
+
     <div class="bus-info-container" id="bus-info-container">
+        <h3>Next Buses</h3>
         <div id="bus-info" class="container"></div>
     </div>
 
@@ -465,6 +466,30 @@
         }).addTo(map);
 
         var busMarkers = [];
+
+        $(document).ready(function() {
+            $('#search-btn').click(function() {
+                var startStop = $('#start-stop').val();
+                var destinationStop = $('#destination-stop').val();
+                if (startStop && destinationStop) {
+                    fetch('/get_bus_data')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Filter data for buses from startStop to destinationStop
+                        var buses = data.filter(bus => bus.startStop == startStop && bus.destinationStop == destinationStop);
+                        // Sort buses by arrival time
+                        buses.sort((a, b) => new Date(a.arrivalTime) - new Date(b.arrivalTime));
+                        // Clear existing bus info
+                        $('#bus-info').empty();
+                        // Display next 3 buses
+                        for (var i = 0; i < Math.min(buses.length, 3); i++) {
+                            $('#bus-info').append(`<div class="bus-card">Bus: ${buses[i].busName}<br>Arrival Time: ${buses[i].arrivalTime}</div>`);
+                        }
+                    })
+                    .catch(error => console.error('Error fetching bus data:', error));
+                }
+            });
+        });
 
         function updateBusLocations() {
             fetch('/get_bus_data')
