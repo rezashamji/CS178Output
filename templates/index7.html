@@ -96,32 +96,33 @@
         }).addTo(map);
 
         var busMarkers = [];
+        var stopMarkers = [];
 
 
-$(document).ready(function() {
-            $('#search-btn').click(function() {
-                console.log('Search button clicked'); 
-                var startStop = $('#start-stop').val();
-                var destinationStop = $('#destination-stop').val();
-                if (startStop && destinationStop) {
-                    $.ajax({
-            url: '/search_routes',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ 'start_stop': startStop, 'destination_stop': destinationStop }),
-            success: function(data) {
-    console.log('Routes:', data);
-    $('#routes-list').empty();
+        $(document).ready(function() {
+                    $('#search-btn').click(function() {
+                        console.log('Search button clicked'); 
+                        var startStop = $('#start-stop').val();
+                        var destinationStop = $('#destination-stop').val();
+                        if (startStop && destinationStop) {
+                            $.ajax({
+                    url: '/search_routes',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 'start_stop': startStop, 'destination_stop': destinationStop }),
+                    success: function(data) {
+            console.log('Routes:', data);
+            $('#routes-list').empty();
 
-    if (data.length === 0) {
-        $('#routes-list').append('<li>No available routes.</li>');
-    } else {
-        data.forEach(function(routeName) {
-            // Directly use the routeName string
-            $('#routes-list').append(`<li>${routeName}</li>`);
-        });
-    }
-}
+            if (data.length === 0) {
+                $('#routes-list').append('<li>No available routes.</li>');
+            } else {
+                data.forEach(function(routeName) {
+                    // Directly use the routeName string
+                    $('#routes-list').append(`<li>${routeName}</li>`);
+                });
+            }
+        }
 
 ,
             error: function(error) {
@@ -177,18 +178,16 @@ $(document).ready(function() {
         {% endfor %}
 
         // @ts-ignore
-        // Display stops
+        // Display stops as circles
         {% for stop in stops_data %}
-            var stopLat = {{ stop['stop_lat'] }};
-            var stopLon = {{ stop['stop_lon'] }};
-            L.marker([stopLat, stopLon], {
-                icon: L.icon({
-                    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                    className: 'marker-icon bus-marker'
-                })
-            }).bindPopup('{{ stop['stop_name'] }}').addTo(map);
+            var stopMarker = L.circleMarker([{{ stop['stop_lat'] }}, {{ stop['stop_lon'] }}], {
+                radius: 5, 
+                color: 'blue', 
+                fillOpacity: 1 
+            }).addTo(map);
+            // Bind popup (to display stop name on hover)
+            stopMarker.bindPopup('{{ stop['stop_name'] }}');
+            stopMarkers.push(stopMarker);
         {% endfor %}
 
     </script>
