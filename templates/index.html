@@ -956,12 +956,12 @@
         // Display stops as circles
         {% for stop in stops_data %}
             var stopMarker = L.circleMarker([{{ stop['stop_lat'] }}, {{ stop['stop_lon'] }}], {
-                radius: 5, // Adjust the radius as needed
-                color: 'blue', // Set the color of the circle
-                fillOpacity: 1 // Make the circle fully opaque
+                radius: 5, 
+                color: 'blue', 
+                fillOpacity: 1 
             }).addTo(map);
     
-            // Bind popup to display stop name on hover
+            // Bind popup (to display stop name on hover)
             stopMarker.bindPopup('{{ stop['stop_name'] }}');
             stopMarkers.push(stopMarker);
         {% endfor %}
