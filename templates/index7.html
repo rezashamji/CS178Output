@@ -97,31 +97,35 @@
 
         var busMarkers = [];
         var stopMarkers = [];
+<<<<<<< HEAD
+=======
 
-$(document).ready(function() {
-            $('#search-btn').click(function() {
-                console.log('Search button clicked'); 
-                var startStop = $('#start-stop').val();
-                var destinationStop = $('#destination-stop').val();
-                if (startStop && destinationStop) {
-                    $.ajax({
-            url: '/search_routes',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ 'start_stop': startStop, 'destination_stop': destinationStop }),
-            success: function(data) {
-    console.log('Routes:', data);
-    $('#routes-list').empty();
+>>>>>>> 746aa2acb2adfb960b6616551ed2aab383da8498
 
-    if (data.length === 0) {
-        $('#routes-list').append('<li>No available routes.</li>');
-    } else {
-        data.forEach(function(routeName) {
-            // Directly use the routeName string
-            $('#routes-list').append(`<li>${routeName}</li>`);
-        });
-    }
-}
+        $(document).ready(function() {
+                    $('#search-btn').click(function() {
+                        console.log('Search button clicked'); 
+                        var startStop = $('#start-stop').val();
+                        var destinationStop = $('#destination-stop').val();
+                        if (startStop && destinationStop) {
+                            $.ajax({
+                    url: '/search_routes',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 'start_stop': startStop, 'destination_stop': destinationStop }),
+                    success: function(data) {
+            console.log('Routes:', data);
+            $('#routes-list').empty();
+
+            if (data.length === 0) {
+                $('#routes-list').append('<li>No available routes.</li>');
+            } else {
+                data.forEach(function(routeName) {
+                    // Directly use the routeName string
+                    $('#routes-list').append(`<li>${routeName}</li>`);
+                });
+            }
+        }
 
 ,
             error: function(error) {
@@ -184,7 +188,10 @@ $(document).ready(function() {
                 color: 'blue', 
                 fillOpacity: 1 
             }).addTo(map);
+<<<<<<< HEAD
     
+=======
+>>>>>>> 746aa2acb2adfb960b6616551ed2aab383da8498
             // Bind popup (to display stop name on hover)
             stopMarker.bindPopup('{{ stop['stop_name'] }}');
             stopMarkers.push(stopMarker);
