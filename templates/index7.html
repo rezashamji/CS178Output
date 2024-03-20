@@ -96,7 +96,7 @@
         }).addTo(map);
 
         var busMarkers = [];
-
+        var stopMarkers = [];
 
 $(document).ready(function() {
             $('#search-btn').click(function() {
@@ -177,20 +177,19 @@ $(document).ready(function() {
         {% endfor %}
 
         // @ts-ignore
-        // Display stops
+        // Display stops as circles
         {% for stop in stops_data %}
-            var stopLat = {{ stop['stop_lat'] }};
-            var stopLon = {{ stop['stop_lon'] }};
-            L.marker([stopLat, stopLon], {
-                icon: L.icon({
-                    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                    className: 'marker-icon bus-marker'
-                })
-            }).bindPopup('{{ stop['stop_name'] }}').addTo(map);
+            var stopMarker = L.circleMarker([{{ stop['stop_lat'] }}, {{ stop['stop_lon'] }}], {
+                radius: 5, 
+                color: 'blue', 
+                fillOpacity: 1 
+            }).addTo(map);
+    
+            // Bind popup (to display stop name on hover)
+            stopMarker.bindPopup('{{ stop['stop_name'] }}');
+            stopMarkers.push(stopMarker);
         {% endfor %}
-
+    
     </script>
 </body>
 </html>
