@@ -973,7 +973,7 @@
 </html> -->
 
 
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1156,5 +1156,243 @@
         {% endfor %}
     </script>
 </body>
-</html>
+</html> -->
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Navigation Platform</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
+    <style>
+        #map { 
+            height: 80vh; /* Set the height of the map */
+            width: 40%; /* Set the width of the map */
+            float: right; /* Position map to the right */
+            padding-right: 20px;
+        }
+        .dropdown-container {
+            width: 25%; 
+            float: left; 
+            margin-bottom: 20px; 
+        }
+        .bus-info-container {
+            display: none; 
+            width: 25%; 
+            float: left; 
+            clear: left; 
+        }
+        .dropdown {
+            width: 100%; 
+            margin-bottom: 20px;
+        }
+        label {
+            display: block; 
+            margin-bottom: 10px; 
+            font-size: 16px; 
+        }
+        select {
+            width: 100%; 
+            font-size: 16px; 
+        }
+        .bus-card {
+            margin-bottom: 20px; 
+            width: auto; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Bus Navigation Platform</h1>
+
+    <div class="dropdown-container">
+        <div class="dropdown">
+            <label for="start-stop">Starting Stop:</label>
+            <select id="start-stop">
+                <option value="" disabled selected>Starting Stop</option> 
+                {% for stop_name in stop_names %}
+                    <option value="{{ stop_name }}">{{ stop_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="dropdown">
+            <label for="destination-stop">Destination Stop:</label>
+            <select id="destination-stop">
+                <option value="" disabled selected>Destination Stop</option> 
+                {% for stop_name in stop_names %}
+                    <option value="{{ stop_name }}">{{ stop_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button id="search-btn" class="btn btn-danger">Search</button>
+    </div>
+
+
+    <div id="schedule-container" style="position: absolute; bottom: 20px; left: 20px;">
+        <button id="schedule-btn" class="btn btn-primary">
+            <i class="fas fa-calendar-alt"></i> Show Schedule
+        </button>
+    </div>
+
+    <div class="modal fade" id="schedule-modal" tabindex="-1" role="dialog" aria-labelledby="schedule-modal-label" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="schedule-modal-label">Bus Schedule</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="schedule-modal-body">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bus-info-container" id="bus-info-container">
+        <h3>Next Buses</h3>
+        <div id="bus-info" class="container"></div>
+    </div>
+    
+    <div id="map">{{ map | safe }}</div>
+
+    <div id="routes-container">
+        <h3>Available Routes</h3>
+        <ul id="routes-list"></ul>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        var map = L.map('map').setView([42.373611, -71.109733], 13.5);
+        L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://carto.com/">Carto</a>'
+        }).addTo(map);
+
+        var busMarkers = [];
+        var stopMarkers = [];
+
+        $(document).ready(function() {
+        $('#search-btn').click(function() {
+            console.log('Search button clicked'); 
+            var startStop = $('#start-stop').val();
+            var destinationStop = $('#destination-stop').val();
+            if (startStop && destinationStop) {
+                $.ajax({
+                    url: '/search_routes',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 'start_stop': startStop, 'destination_stop': destinationStop }),
+                    success: function(data) {
+                        console.log('Routes:', data);
+                        $('#routes-list').empty();
+
+                        if (data.length === 0) {
+                            $('#routes-list').append('<li>No available routes.</li>');
+                        } else {
+                            data.forEach(function(route) {
+                                $('#routes-list').append(`<li>${route.route_name} - Next Bus ETA: ${route.nearest_time}</li>`);
+                            });
+                        }
+                    },
+                    error: function(error) {
+                        console.error('Error searching routes:', error);
+                    }
+                });
+            }
+        });
+    });
+
+    $('#schedule-btn').click(function() {
+    var startStop = $('#start-stop').val();
+    if (startStop) {
+        $.ajax({
+            url: '/get_schedule',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ 'start_stop': startStop }),
+            success: function(data) {
+                console.log('Schedule:', data);
+                var scheduleModalBody = $('#schedule-modal-body');
+                scheduleModalBody.empty();
+
+                if (data.length === 0) {
+                    scheduleModalBody.append('<p>No schedule available.</p>');
+                } else {
+                    data.forEach(function(route) {
+                        scheduleModalBody.append(`<p>${route.route_name}: ${route.times.join(', ')}</p>`);
+                    });
+                }
+
+                $('#schedule-modal').modal('show'); 
+            },
+            error: function(error) {
+                console.error('Error fetching schedule:', error);
+            }
+            });
+        }
+    });
+
+
+        function updateBusLocations() {
+            fetch('/get_bus_data')
+            .then(response => response.json())
+            .then(data => {
+                console.log("Bus Data:", data); 
+                
+                // Clear existing bus markers
+                busMarkers.forEach(marker => {
+                    map.removeLayer(marker);
+                });
+                busMarkers = [];
+
+                // Add new bus markers
+                data.forEach(bus => {
+                    var marker = L.marker([bus.latitude, bus.longitude], {
+                        icon: L.icon({
+                            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            className: 'marker-icon bus-marker'
+                        })
+                    }).addTo(map);
+                    busMarkers.push(marker);
+                });
+            })
+            .catch(error => console.error('Error fetching bus data:', error));
+        }
+
+        updateBusLocations();
+        setInterval(updateBusLocations, 5000);
+
+        // Display routes
+        {% for shape_id, shape_points in shapes_data.items() %}
+            var lineCoordinates{{ loop.index }} = [
+                {% for point in shape_points %}
+                    [{{ point['shape_pt_lat'] }}, {{ point['shape_pt_lon'] }}],
+                {% endfor %}
+            ];
+            L.polyline(lineCoordinates{{ loop.index }}, { color: 'green' }).addTo(map);
+        {% endfor %}
+
+        // Display stops as circles
+        {% for stop in stops_data %}
+            var stopMarker = L.circleMarker([{{ stop['stop_lat'] }}, {{ stop['stop_lon'] }}], {
+                radius: 5, 
+                color: 'blue', 
+                fillOpacity: 1 
+            }).addTo(map);
+            // Bind popup (to display stop name on hover)
+            stopMarker.bindPopup('{{ stop['stop_name'] }}');
+            stopMarkers.push(stopMarker);
+        {% endfor %}
+    </script>
+</body>
+</html>
