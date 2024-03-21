@@ -1177,9 +1177,11 @@
             padding-right: 20px;
         }
         .dropdown-container {
-            width: 25%; 
+            width: 40%; 
             float: left; 
             margin-bottom: 20px; 
+            padding-left: 10px;
+            padding-top: 10px;
         }
         .bus-info-container {
             display: none; 
@@ -1204,6 +1206,18 @@
             margin-bottom: 20px; 
             width: auto; 
         }
+        #routes-container {
+            width: 3=40%;
+            float: left;
+            margin-top: 20px;
+            clear: left; 
+            padding-left: 10px;
+        }
+        #routes-list {
+            list-style-type: none;
+            padding-left: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -1361,7 +1375,7 @@
                     var marker = L.marker([bus.latitude, bus.longitude], {
                         icon: L.icon({
                             iconUrl: 'https://cdn-icons-png.freepik.com/512/3448/3448339.png',
-                            iconSize: [39, 45],
+                            iconSize: [38, 43],
                             iconAnchor: [12, 41],
                             className: 'marker-icon bus-marker'
                         })
