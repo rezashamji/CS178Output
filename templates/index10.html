@@ -12,9 +12,9 @@
 
     <style>
         #map { 
-            height: 80vh; /* Set the height of the map */
-            width: 40%; /* Set the width of the map */
-            float: right; /* Position map to the right */
+            height: 80vh; 
+            width: 40%; 
+            float: right; 
             padding-right: 20px;
         }
         .dropdown-container {
@@ -151,8 +151,9 @@
                             $('#routes-list').append('<li>No available routes.</li>');
                         } else {
                             data.forEach(function(route) {
-                                $('#routes-list').append(`<li>${route.route_name} - Next Bus ETA: ${route.nearest_time}</li>`);
+                                $('#routes-list').append(`<li>${route.route_name} - Next Bus ETA: ${route.eta}</li>`);
                             });
+
                         }
                     },
                     error: function(error) {
