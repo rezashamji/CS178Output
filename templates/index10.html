@@ -198,6 +198,7 @@ $(document).ready(function() {
                             data.forEach(function(route) {
                                 $('#routes-list').append(`<li>${route.route_name} - Next Bus ETA: ${route.eta}</li>`);
                             });
+
                         }
                     },
                     error: function(error) {

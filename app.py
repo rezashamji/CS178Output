@@ -556,36 +556,61 @@ def fetch_data(url):
         print("Error fetching data:", e)
         return None
 
-def fetch_nearest_time(route_id, start_stop_id):
-    # Fetch Trip Updates data
-    trip_updates_url = f"https://passio3.com/harvard/passioTransit/gtfs/realtime/tripUpdates.json"
-    trip_updates_data = fetch_data(trip_updates_url)
+def fetch_trip_updates():
+    # URL for the GTFS Realtime trip updates feed
+    trip_updates_url = "https://passio3.com/harvard/passioTransit/gtfs/realtime/tripUpdates.json"
+    try:
+        # Make a GET request to fetch the trip updates
+        response = requests.get(trip_updates_url)
+        response.raise_for_status()  # Raises an exception for 4XX or 5XX status codes
+        # Parse the JSON response
+        trip_updates = response.json()
+        return trip_updates
+    except requests.RequestException as e:
+        # Handle any errors that occur during the request
+        print(f"Error fetching trip updates: {e}")
+        return None
+    
+def extract_trip_ids_from_updates(trip_updates):
+    trip_ids = []
+    if trip_updates and 'entity' in trip_updates:
+        for entity in trip_updates['entity']:
+            if 'trip_update' in entity and 'trip' in entity['trip_update']:
+                trip_id = entity['trip_update']['trip'].get('trip_id')
+                if trip_id:
+                    trip_ids.append(trip_id)
+    return trip_ids
 
-    print("Trip Updates data:", trip_updates_data)
 
-    # Get current time
-    current_time = datetime.now().timestamp()
+def match_trips_to_routes(valid_trip_ids, routes_data):
+    matching_routes = []
+    for route_id, route_info in routes_data.items():
+        for trip_id in route_info.get('trip_ids', []):
+            if trip_id in valid_trip_ids:
+                matching_routes.append(route_id)
+                break  # Stop searching this route if a match is found
+    return matching_routes
 
-    # Find nearest time in Trip Updates data
-    nearest_time = None
-    if trip_updates_data and 'entity' in trip_updates_data:
-        for entity in trip_updates_data['entity']:
-            trip_update = entity.get('trip_update', {})
-            stop_time_updates = trip_update.get('stop_time_update', [])
-            for stop_time_update in stop_time_updates:
-                if stop_time_update.get('stop_id') == start_stop_id:
-                    arrival_time = stop_time_update.get('arrival', {}).get('time')
-                    if arrival_time:
-                        # Convert epoch time to datetime object
-                        arrival_datetime = datetime.fromtimestamp(arrival_time)
-                        if nearest_time is None or arrival_datetime < nearest_time:
-                            nearest_time = arrival_datetime
+from datetime import datetime, timezone
 
-    # Convert datetime object to human-readable format
-    if nearest_time:
-        nearest_time = nearest_time.strftime('%H:%M')
+def calculate_eta_for_stop(trip_updates, stop_id):
+    etas = {}
+    for entity in trip_updates['entity']:
+        trip_update = entity.get('trip_update', {})
+        trip_id = trip_update.get('trip', {}).get('trip_id')
+        for stop_time_update in trip_update.get('stop_time_update', []):
+            if stop_time_update.get('stop_id') == stop_id:
+                arrival = stop_time_update.get('arrival', {})
+                arrival_time = arrival.get('time')
+                if arrival_time:
+                    # Convert arrival time from UNIX timestamp to a datetime object
+                    arrival_datetime = datetime.fromtimestamp(arrival_time, tz=timezone.utc)
+                    # Calculate ETA as the difference between arrival time and now
+                    eta = (arrival_datetime - datetime.now(timezone.utc)).total_seconds()
+                    etas[trip_id] = eta  # Store ETA in seconds
+    return etas
 
-    return nearest_time
+
 
 @app.route('/')
 def index():
@@ -630,7 +655,8 @@ def index():
     stop_names = [stop['stop_name'] for stop in stops_data]
 
     # Pass shapes_data to the template
-    return render_template('index.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
+    return render_template('index10.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
+
 
 
 # Route to serve live bus data
@@ -646,7 +672,55 @@ def get_bus_data():
         return jsonify(bus_data)  # Serialize data to JSON and return
     else:
         return jsonify([])  # Return empty list if no bus data is available
+    
 
+
+# @app.route('/get_schedule', methods=['POST'])
+# def get_schedule():
+#     data = request.json
+#     print("Received schedule request data:", data)  # Log the incoming data
+
+#     start_stop_name = data['start_stop']
+#     destination_stop_name = data['destination_stop']
+
+#     # Fetching stop IDs based on names
+#     start_stop_id = next((stop['stop_id'] for stop in stops_data if stop['stop_name'] == start_stop_name), None)
+#     destination_stop_id = next((stop['stop_id'] for stop in stops_data if stop['stop_name'] == destination_stop_name), None)
+
+#     print(f"Start stop ID: {start_stop_id}, Destination stop ID: {destination_stop_id}")
+
+#     valid_routes = []
+
+#     # Find routes that pass through both the starting stop and the destination stop
+#     for route_id, route_details in final_updated_routes_with_stops_data.items():
+#         if start_stop_name in route_details['stops'] and destination_stop_name in route_details['stops']:
+#             valid_routes.append(route_id)
+
+#     print(f"Valid routes: {valid_routes}")
+
+#     # Find departure times for each valid route from the starting stop
+#     schedules = []
+#     for route_id in valid_routes:
+#         # Find corresponding trip IDs for the route
+#         trip_ids = final_updated_routes_with_stops_data[route_id]['trip_ids']
+
+#         # Extract departure times for each trip from the starting stop
+#         departure_times = []
+#         for trip_id in trip_ids:
+#             if trip_id in stop_times_data:
+#                 for stop_time in stop_times_data[trip_id]:
+#                     if stop_time['stop_id'] == start_stop_id:
+#                         departure_times.append(stop_time['departure_time'])
+
+#         # Add the route and its departure times to the schedules list
+#         schedules.append({
+#             'route_name': final_updated_routes_with_stops_data[route_id]['route_long_name'],
+#             'departure_times': departure_times
+#         })
+
+#     print(f"Schedules: {schedules}")
+
+#     return jsonify(schedules)
 @app.route('/get_schedule', methods=['POST'])
 def get_schedule():
     data = request.json
@@ -682,12 +756,17 @@ def get_schedule():
             if trip_id in stop_times_data:
                 for stop_time in stop_times_data[trip_id]:
                     if stop_time['stop_id'] == start_stop_id:
-                        departure_times.append(stop_time['departure_time'])
+                        # Check if departure time is in 12-hour format or 24-hour format
+                        try:
+                            departure_time = datetime.strptime(stop_time['departure_time'], '%I:%M:%S %p').strftime('%H:%M:%S')
+                        except ValueError:
+                            departure_time = stop_time['departure_time']
+                        departure_times.append(departure_time)
 
         # Add the route and its departure times to the schedules list
         schedules.append({
             'route_name': final_updated_routes_with_stops_data[route_id]['route_long_name'],
-            'departure_times': departure_times
+            'departure_times': sorted(departure_times)  # Sort the departure times
         })
 
     print(f"Schedules: {schedules}")
@@ -708,6 +787,7 @@ def search_routes():
     start_stop_id = next((stop['stop_id'] for stop in stops_data if stop['stop_name'] == start_stop_name), None)
     destination_stop_id = next((stop['stop_id'] for stop in stops_data if stop['stop_name'] == destination_stop_name), None)
 
+    
     print(f"Start stop ID: {start_stop_id}, Destination stop ID: {destination_stop_id}")
 
     valid_trip_ids = []
@@ -719,20 +799,38 @@ def search_routes():
         if start_stop_id in stop_ids and destination_stop_id in stop_ids:
             valid_trip_ids.append(trip_id)
 
-    print(f"Valid trip IDs: {valid_trip_ids}")
 
-    # Find corresponding routes for the valid trip IDs
-    valid_routes = []
+    # Fetch real-time trip updates
+    trip_updates = fetch_trip_updates()
+    real_time_trip_ids = extract_trip_ids_from_updates(trip_updates)
+
+    # Calculate ETAs for the starting stop
+    etas = calculate_eta_for_stop(trip_updates, start_stop_id)
+
+    # Filter valid_trip_ids to include only those found in real-time updates
+    valid_real_time_trip_ids = [trip_id for trip_id in valid_trip_ids if trip_id in real_time_trip_ids]
+    routes_with_etas = {}
     for route_id, route_details in final_updated_routes_with_stops_data.items():
-        if any(trip_id in valid_trip_ids for trip_id in route_details['trip_ids']):
-            valid_routes.append({
-                'route_name': route_details['route_long_name'],
-                'nearest_time': fetch_nearest_time(route_id, start_stop_id)
-            })
+        for trip_id in route_details['trip_ids']:
+            if trip_id in valid_real_time_trip_ids:
+                route_name = route_details['route_long_name']
+                eta_seconds = etas.get(trip_id)
+                if eta_seconds is not None:
+                    if route_name not in routes_with_etas or eta_seconds < routes_with_etas[route_name]:
+                        routes_with_etas[route_name] = eta_seconds  # Update with the earliest ETA
 
-    print(f"Valid routes: {valid_routes}")
+    # Format the response to include route names and the earliest ETA for each route
+   # ... in /search_routes
+    response = []
+    for route, eta_seconds in routes_with_etas.items():
+        eta_minutes = int(eta_seconds // 60)
+        eta_seconds_remainder = int(eta_seconds % 60)
+        readable_eta = f"{eta_minutes} min {eta_seconds_remainder} sec"
+        response.append({"route_name": route, "eta": readable_eta})  # Changed key to "route_name"
 
-    return jsonify(valid_routes)
+
+    return jsonify(response)
 
 if __name__ == '__main__':
     app.run(debug=True)
+
