@@ -1278,6 +1278,7 @@
 
         var busMarkers = [];
         var stopMarkers = [];
+        var routesPolylines = {}; // Object to store route polylines
 
         $(document).ready(function() {
         $('#search-btn').click(function() {
@@ -1343,7 +1344,6 @@
         });
     });
 
-
         function updateBusLocations() {
             fetch('/get_bus_data')
             .then(response => response.json())
@@ -1360,8 +1360,8 @@
                 data.forEach(bus => {
                     var marker = L.marker([bus.latitude, bus.longitude], {
                         icon: L.icon({
-                            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-                            iconSize: [25, 41],
+                            iconUrl: 'https://cdn0.iconfinder.com/data/icons/transportation-86/24/bus-circle-512.png',
+                            iconSize: [35, 45],
                             iconAnchor: [12, 41],
                             className: 'marker-icon bus-marker'
                         })
