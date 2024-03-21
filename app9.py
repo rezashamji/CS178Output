@@ -73,9 +73,10 @@ def match_trips_to_routes(valid_trip_ids, routes_data):
 from datetime import datetime, timezone
 
 def calculate_eta_for_stop(trip_updates, stop_id):
-    etas = []
+    etas = {}
     for entity in trip_updates['entity']:
         trip_update = entity.get('trip_update', {})
+        trip_id = trip_update.get('trip', {}).get('trip_id')
         for stop_time_update in trip_update.get('stop_time_update', []):
             if stop_time_update.get('stop_id') == stop_id:
                 arrival = stop_time_update.get('arrival', {})
@@ -84,9 +85,10 @@ def calculate_eta_for_stop(trip_updates, stop_id):
                     # Convert arrival time from UNIX timestamp to a datetime object
                     arrival_datetime = datetime.fromtimestamp(arrival_time, tz=timezone.utc)
                     # Calculate ETA as the difference between arrival time and now
-                    eta = arrival_datetime - datetime.now(timezone.utc)
-                    etas.append(eta.total_seconds() / 60)  # Convert ETA to minutes
+                    eta = (arrival_datetime - datetime.now(timezone.utc)).total_seconds()
+                    etas[trip_id] = eta  # Store ETA in seconds
     return etas
+
 
 
 @app.route('/')
@@ -184,6 +186,27 @@ def search_routes():
 
     # Filter valid_trip_ids to include only those found in real-time updates
     valid_real_time_trip_ids = [trip_id for trip_id in valid_trip_ids if trip_id in real_time_trip_ids]
+    routes_with_etas = {}
+    for route_id, route_details in final_updated_routes_with_stops_data.items():
+        for trip_id in route_details['trip_ids']:
+            if trip_id in valid_real_time_trip_ids:
+                route_name = route_details['route_long_name']
+                eta_seconds = etas.get(trip_id)
+                if eta_seconds is not None:
+                    if route_name not in routes_with_etas or eta_seconds < routes_with_etas[route_name]:
+                        routes_with_etas[route_name] = eta_seconds  # Update with the earliest ETA
+
+    # Format the response to include route names and the earliest ETA for each route
+   # ... in /search_routes
+    response = []
+    for route, eta_seconds in routes_with_etas.items():
+        eta_minutes = int(eta_seconds // 60)
+        eta_seconds_remainder = int(eta_seconds % 60)
+        readable_eta = f"{eta_minutes} min {eta_seconds_remainder} sec"
+        response.append({"route_name": route, "eta": readable_eta})  # Changed key to "route_name"
+
+
+    return jsonify(response)
 
     # Map trip_ids to their respective routes and ETAs
     routes_with_etas = {}
