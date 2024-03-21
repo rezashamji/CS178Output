@@ -11,19 +11,29 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
     <style>
-        #map { 
-            height: 80vh; /* Set the height of the map */
-            width: 40%; /* Set the width of the map */
-            float: right; /* Position map to the right */
-            padding-right: 20px;
-        }
-        .dropdown-container {
+        html, body {
+    height: 100%; /* Ensure the full height is used */
+   
+    overflow-x: hidden; /* Hide horizontal scrollbar if the width overflows */
+}
+
+#map { 
+    height: 100vh; /* Set the height of the map to full viewport height */
+    width: 60%; /* Set the width of the map to 60% of the viewport width */
+    position: absolute; /* Use absolute positioning */
+    top: 0; /* Align to the top */
+    right: 0; /* Align to the right side */
+}
+.dropdown-container {
             width: 40%; 
             float: left; 
             margin-bottom: 20px; 
             padding-left: 10px;
             padding-top: 10px;
-        }
+             }
+
+/* Add styles for other elements if needed */
+
         .bus-info-container {
             display: none; 
             width: 25%; 
@@ -31,7 +41,7 @@
             clear: left; 
         }
         .dropdown {
-            width: 100%; 
+            width: 50%; 
             margin-bottom: 20px;
         }
         label {
@@ -63,7 +73,7 @@
 </head>
 
 <body>
-    <h1>Bus Navigation Platform</h1>
+    <h1>CrimGo</h1>
 
     <div class="dropdown-container">
         <div class="dropdown">
@@ -124,13 +134,48 @@
 
     
     <script>
+
+
         var map = L.map('map').setView([42.373611, -71.109733], 13.5);
         L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://carto.com/">Carto</a>'
         }).addTo(map);
+        function showUserLocation() {
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) { // Success callback
+                var userLat = position.coords.latitude;
+                var userLng = position.coords.longitude;
+                console.log("User's location: ", position.coords); // Corrected line
+
+                L.marker([userLat, userLng]).addTo(map)
+                    .bindPopup('You are here')
+                    .openPopup();
+
+                map.setView([userLat, userLng], 13.5);
+            },
+            function(error) { // Error callback
+                console.error("Error getting user's location: ", error);
+                // You can still set a default view if you wish
+                map.setView([42.373611, -71.109733], 13.5);
+            }
+            
+        );
+    } else {
+        console.log('Geolocation is not supported by this browser.');
+        // You can set a default view
+        map.setView([42.373611, -71.109733], 13.5);
+    }
+}
+
+$(document).ready(function() {
+    showUserLocation(); // Call the function to show the user's location
+    // You can add other operations you need to perform when document is ready
+});
 
         var busMarkers = [];
         var stopMarkers = [];
+
 
         $(document).ready(function() {
         $('#search-btn').click(function() {
@@ -151,7 +196,7 @@
                             $('#routes-list').append('<li>No available routes.</li>');
                         } else {
                             data.forEach(function(route) {
-                                $('#routes-list').append(`<li>${route.route_name} - Next Bus ETA: ${route.nearest_time}</li>`);
+                                $('#routes-list').append(`<li>${route.route_name} - Next Bus ETA: ${route.eta}</li>`);
                             });
                         }
                     },
@@ -215,7 +260,7 @@
                     var marker = L.marker([bus.latitude, bus.longitude], {
                         icon: L.icon({
                             iconUrl: 'https://cdn-icons-png.freepik.com/512/3448/3448339.png',
-                            iconSize: [20, 27],
+                            iconSize: [35, 40],
                             iconAnchor: [12, 41],
                             className: 'marker-icon bus-marker'
                         })
@@ -228,6 +273,7 @@
 
         updateBusLocations();
         setInterval(updateBusLocations, 5000);
+
 
 
         // Display routes
