@@ -587,28 +587,6 @@ def fetch_nearest_time(route_id, start_stop_id):
 
     return nearest_time
 
-def fetch_departure_times(route_id, start_stop_id):
-    # Fetch current date
-    current_date = datetime.now().strftime('%Y-%m-%d')
-
-    # Initialize list to store departure times
-    departure_times = []
-
-    # Loop through stop times for the given route
-    if route_id in stop_times_data:
-        for stop_time in stop_times_data[route_id]:
-            # Check if the stop is the start stop and the arrival time is on the current date
-            if stop_time['stop_id'] == start_stop_id and stop_time['arrival_time'].startswith(current_date):
-                # Convert arrival time string to datetime object
-                arrival_time = datetime.strptime(stop_time['arrival_time'], '%Y-%m-%d %H:%M:%S')
-                # Check if arrival time is within the specified time range
-                if arrival_time.time() >= datetime.strptime('00:00:00', '%H:%M:%S').time() and \
-                        arrival_time.time() <= datetime.strptime('23:59:59', '%H:%M:%S').time():
-                    # Add departure time to the list
-                    departure_times.append(arrival_time.strftime('%H:%M'))
-
-    return departure_times
-
 @app.route('/')
 def index():
     # Initialize map centered at Harvard's location
