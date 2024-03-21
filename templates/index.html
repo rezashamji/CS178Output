@@ -1278,6 +1278,7 @@
 
         var busMarkers = [];
         var stopMarkers = [];
+        var routesPolylines = {}; // Object to store route polylines
 
         $(document).ready(function() {
         $('#search-btn').click(function() {
@@ -1310,36 +1311,38 @@
         });
     });
 
-    $('#schedule-btn').click(function() {
-    var startStop = $('#start-stop').val();
-    if (startStop) {
-        $.ajax({
-            url: '/get_schedule',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ 'start_stop': startStop }),
-            success: function(data) {
-                console.log('Schedule:', data);
-                var scheduleModalBody = $('#schedule-modal-body');
-                scheduleModalBody.empty();
+    $(document).ready(function() {
+        $('#schedule-btn').click(function() {
+            var startStop = $('#start-stop').val();
+            var destinationStop = $('#destination-stop').val();
+            if (startStop && destinationStop) {
+                $.ajax({
+                    url: '/get_schedule',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 'start_stop': startStop, 'destination_stop': destinationStop }),
+                    success: function(data) {
+                        console.log('Schedule:', data);
+                        var scheduleModalBody = $('#schedule-modal-body');
+                        scheduleModalBody.empty();
 
-                if (data.length === 0) {
-                    scheduleModalBody.append('<p>No schedule available.</p>');
-                } else {
-                    data.forEach(function(route) {
-                        scheduleModalBody.append(`<p>${route.route_name}: ${route.times.join(', ')}</p>`);
-                    });
-                }
+                        if (data.length === 0) {
+                            scheduleModalBody.append('<p>No schedule available.</p>');
+                        } else {
+                            data.forEach(function(route) {
+                                scheduleModalBody.append(`<p>${route.route_name}: ${route.departure_times.join(', ')}</p>`);
+                            });
+                        }
 
-                $('#schedule-modal').modal('show'); 
-            },
-            error: function(error) {
-                console.error('Error fetching schedule:', error);
+                        $('#schedule-modal').modal('show'); // Show the modal
+                    },
+                    error: function(error) {
+                        console.error('Error fetching schedule:', error);
+                    }
+                });
             }
-            });
-        }
+        });
     });
-
 
         function updateBusLocations() {
             fetch('/get_bus_data')
@@ -1357,8 +1360,8 @@
                 data.forEach(bus => {
                     var marker = L.marker([bus.latitude, bus.longitude], {
                         icon: L.icon({
-                            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-                            iconSize: [25, 41],
+                            iconUrl: 'https://cdn-icons-png.freepik.com/512/3448/3448339.png',
+                            iconSize: [39, 45],
                             iconAnchor: [12, 41],
                             className: 'marker-icon bus-marker'
                         })
