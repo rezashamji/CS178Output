@@ -37,7 +37,7 @@ def fetch_data(url):
         print("Error fetching data:", e)
         return None
 
-def fetch_nearest_time(trip_id, start_stop_id):
+#def fetch_nearest_time(trip_id, start_stop_id):
     trip_updates_url = "https://passio3.com/harvard/passioTransit/gtfs/realtime/tripUpdates.json"
     trip_updates_data = fetch_data(trip_updates_url)
 
@@ -68,54 +68,36 @@ def fetch_nearest_time(trip_id, start_stop_id):
 
     return nearest_time_str
 
-
-#def fetch_nearest_time(route_id, start_stop_id):
-    # Fetch Trip Updates data
-    trip_updates_url = f"https://passio3.com/harvard/passioTransit/gtfs/realtime/tripUpdates.json"
+def fetch_nearest_time(trip_id, start_stop_id):
+    trip_updates_url = "https://passio3.com/harvard/passioTransit/gtfs/realtime/tripUpdates.json"
     trip_updates_data = fetch_data(trip_updates_url)
 
-    # Print the complete trip updates data for verification
-    print("Complete Trip Updates data:", trip_updates_data)
+    # Assume we're working with local timezone for now
+    local_zone = pytz.timezone('America/New_York')
+    current_time_local = datetime.now(pytz.utc).astimezone(local_zone)
 
-    # Get current time
-    current_time = datetime.now().timestamp()
-
-    # Print the current time for comparison
-    print("Current timestamp:", current_time)
-
-    # Find nearest time in Trip Updates data
     nearest_time = None
+    nearest_time_str = None
+
     if trip_updates_data and 'entity' in trip_updates_data:
         for entity in trip_updates_data['entity']:
             trip_update = entity.get('trip_update', {})
-            stop_time_updates = trip_update.get('stop_time_update', [])
-            for stop_time_update in stop_time_updates:
-                print(f"Checking stop_id: {stop_time_update.get('stop_id')} for start_stop_id: {start_stop_id}")
-                if stop_time_update.get('stop_id') == start_stop_id:
-                    arrival_time = stop_time_update.get('arrival', {}).get('time')
-                    if arrival_time:
-                        # Print each arrival time found for the start_stop_id
-                        print(f"Found arrival time: {arrival_time} for start_stop_id: {start_stop_id}")
-                        
-                        # Convert epoch time to datetime object
-                        arrival_datetime = datetime.fromtimestamp(arrival_time)
-                        
-                        # Print the datetime object for verification
-                        print(f"Converted datetime object: {arrival_datetime}")
-                        
-                        if nearest_time is None or arrival_datetime < nearest_time:
-                            # Update nearest time if a closer time is found
-                            nearest_time = arrival_datetime
-                            print(f"Updated nearest time: {nearest_time}")
+            if trip_update.get('trip', {}).get('trip_id') == trip_id:
+                stop_time_updates = trip_update.get('stop_time_update', [])
+                for stop_time_update in stop_time_updates:
+                    if stop_time_update.get('stop_id') == start_stop_id:
+                        arrival_time_utc = datetime.utcfromtimestamp(stop_time_update.get('arrival', {}).get('time')).replace(tzinfo=pytz.utc)
+                        arrival_time_local = arrival_time_utc.astimezone(local_zone)
 
-    # Convert datetime object to human-readable format if a nearest time was found
+                        # Checking if the arrival time is in the future and is the nearest so far
+                        if current_time_local < arrival_time_local and (nearest_time is None or arrival_time_local < nearest_time):
+                            nearest_time = arrival_time_local
+
+    # Format nearest_time if not None
     if nearest_time:
-        formatted_nearest_time = nearest_time.strftime('%H:%M')
-        print(f"Nearest time in human-readable format: {formatted_nearest_time}")
-        return formatted_nearest_time
-    else:
-        print("No nearest time found.")
-        return None
+        nearest_time_str = nearest_time.strftime('%H:%M')
+
+    return nearest_time_str
 
 
 @app.route('/')
@@ -192,9 +174,9 @@ def get_schedule():
 
     # Find schedules for the start stop
     schedules = []
-    for trip_id, route_details in final_updated_routes_with_stops_data.items():
+    for route_id, route_details in final_updated_routes_with_stops_data.items():
         if start_stop_name in route_details['stops']:
-            nearest_times = [fetch_nearest_time(trip_id, start_stop_id) for _ in range(5)]  # Fetch next 5 times
+            nearest_times = [fetch_nearest_time(route_id, start_stop_id) for _ in range(5)]  # Fetch next 5 times
             schedules.append({
                 'route_name': route_details['route_long_name'],
                 'times': nearest_times
@@ -203,8 +185,6 @@ def get_schedule():
     print(f"Schedules: {schedules}")
 
     return jsonify(schedules)
-
-
 
 @app.route('/search_routes', methods=['POST'])
 def search_routes():
@@ -232,11 +212,11 @@ def search_routes():
     print(f"Valid trip IDs: {valid_trip_ids}")
         # Find corresponding routes for the valid trip IDs
     valid_routes = []
-    for route_name, route_details in final_updated_routes_with_stops_data.items():
+    for route_id, route_details in final_updated_routes_with_stops_data.items():
         if any(trip_id in valid_trip_ids for trip_id in route_details['trip_ids']):
             valid_routes.append({
                 'route_name': route_details['route_long_name'],
-                'nearest_time': fetch_nearest_time(trip_id, start_stop_id)
+                'nearest_time': fetch_nearest_time(route_id, start_stop_id)
             })
 
     print(f"Valid routes: {valid_routes}")
