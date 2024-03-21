@@ -587,6 +587,27 @@ def fetch_nearest_time(route_id, start_stop_id):
 
     return nearest_time
 
+def fetch_departure_times(route_id, start_stop_id):
+    # Fetch current date
+    current_date = datetime.now().strftime('%Y-%m-%d')
+
+    # Initialize list to store departure times
+    departure_times = []
+
+    # Loop through stop times for the given route
+    if route_id in stop_times_data:
+        for stop_time in stop_times_data[route_id]:
+            # Check if the stop is the start stop and the arrival time is on the current date
+            if stop_time['stop_id'] == start_stop_id and stop_time['arrival_time'].startswith(current_date):
+                # Convert arrival time string to datetime object
+                arrival_time = datetime.strptime(stop_time['arrival_time'], '%Y-%m-%d %H:%M:%S')
+                # Check if arrival time is within the specified time range
+                if arrival_time.time() >= datetime.strptime('00:00:00', '%H:%M:%S').time() and \
+                        arrival_time.time() <= datetime.strptime('23:59:59', '%H:%M:%S').time():
+                    # Add departure time to the list
+                    departure_times.append(arrival_time.strftime('%H:%M'))
+
+    return departure_times
 
 @app.route('/')
 def index():
@@ -654,21 +675,42 @@ def get_schedule():
     print("Received schedule request data:", data)  # Log the incoming data
 
     start_stop_name = data['start_stop']
+    destination_stop_name = data['destination_stop']
 
-    # Fetching stop ID based on name
+    # Fetching stop IDs based on names
     start_stop_id = next((stop['stop_id'] for stop in stops_data if stop['stop_name'] == start_stop_name), None)
+    destination_stop_id = next((stop['stop_id'] for stop in stops_data if stop['stop_name'] == destination_stop_name), None)
 
-    print(f"Start stop ID: {start_stop_id}")
+    print(f"Start stop ID: {start_stop_id}, Destination stop ID: {destination_stop_id}")
 
-    # Find schedules for the start stop
-    schedules = []
+    valid_routes = []
+
+    # Find routes that pass through both the starting stop and the destination stop
     for route_id, route_details in final_updated_routes_with_stops_data.items():
-        if start_stop_name in route_details['stops']:
-            nearest_times = [fetch_nearest_time(route_id, start_stop_id) for _ in range(5)]  # Fetch next 5 times
-            schedules.append({
-                'route_name': route_details['route_long_name'],
-                'times': nearest_times
-            })
+        if start_stop_name in route_details['stops'] and destination_stop_name in route_details['stops']:
+            valid_routes.append(route_id)
+
+    print(f"Valid routes: {valid_routes}")
+
+    # Find departure times for each valid route from the starting stop
+    schedules = []
+    for route_id in valid_routes:
+        # Find corresponding trip IDs for the route
+        trip_ids = final_updated_routes_with_stops_data[route_id]['trip_ids']
+
+        # Extract departure times for each trip from the starting stop
+        departure_times = []
+        for trip_id in trip_ids:
+            if trip_id in stop_times_data:
+                for stop_time in stop_times_data[trip_id]:
+                    if stop_time['stop_id'] == start_stop_id:
+                        departure_times.append(stop_time['departure_time'])
+
+        # Add the route and its departure times to the schedules list
+        schedules.append({
+            'route_name': final_updated_routes_with_stops_data[route_id]['route_long_name'],
+            'departure_times': departure_times
+        })
 
     print(f"Schedules: {schedules}")
 
