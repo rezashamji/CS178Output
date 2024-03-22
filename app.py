@@ -610,7 +610,13 @@ def calculate_eta_for_stop(trip_updates, stop_id):
                     etas[trip_id] = eta  # Store ETA in seconds
     return etas
 
+def get_route_name_for_trip(trip_id):
+    # Loop through routes data to find the route containing the trip_id
+    for route_id, route_info in final_updated_routes_with_stops_data.items():
+        if trip_id in route_info.get('trip_ids', []):
+            return route_info.get('route_long_name', 'Unknown Route')  # Return the route name if found
 
+    return 'Unknown Route'
 
 @app.route('/')
 def index():
@@ -655,72 +661,49 @@ def index():
     stop_names = [stop['stop_name'] for stop in stops_data]
 
     # Pass shapes_data to the template
-    return render_template('index10.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
+    return render_template('index.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
 
 
+
+# Route to serve live bus data
+# @app.route('/get_bus_data')
+# def get_bus_data():
+#     # Fetch live bus data from the server
+#     vehicle_positions = fetch_data("https://passio3.com/harvard/passioTransit/gtfs/realtime/vehiclePositions.json")
+#     if vehicle_positions and 'entity' in vehicle_positions:
+#         # Extract necessary data (latitude and longitude) from vehicle positions
+#         bus_data = [{'latitude': entity['vehicle']['position']['latitude'],
+#                      'longitude': entity['vehicle']['position']['longitude']}
+#                     for entity in vehicle_positions['entity']]
+#         return jsonify(bus_data)  # Serialize data to JSON and return
+#     else:
+#         return jsonify([])  # Return empty list if no bus data is available
 
 # Route to serve live bus data
 @app.route('/get_bus_data')
 def get_bus_data():
     # Fetch live bus data from the server
     vehicle_positions = fetch_data("https://passio3.com/harvard/passioTransit/gtfs/realtime/vehiclePositions.json")
+    bus_data = []
     if vehicle_positions and 'entity' in vehicle_positions:
-        # Extract necessary data (latitude and longitude) from vehicle positions
-        bus_data = [{'latitude': entity['vehicle']['position']['latitude'],
-                     'longitude': entity['vehicle']['position']['longitude']}
-                    for entity in vehicle_positions['entity']]
-        return jsonify(bus_data)  # Serialize data to JSON and return
-    else:
-        return jsonify([])  # Return empty list if no bus data is available
+        for entity in vehicle_positions['entity']:
+            vehicle = entity.get('vehicle', {})
+            position = vehicle.get('position', {})
+            lat = position.get('latitude')
+            lon = position.get('longitude')
+            vehicle_id = vehicle.get('vehicle', {}).get('id')
+            trip_id = vehicle.get('trip', {}).get('trip_id')
+            route_name = get_route_name_for_trip(trip_id)  # Get the route name for the trip_id
+            if lat and lon:
+                bus_data.append({
+                    'latitude': lat,
+                    'longitude': lon,
+                    'route_name': route_name
+                })
+
+    return jsonify(bus_data)
+
     
-
-
-# @app.route('/get_schedule', methods=['POST'])
-# def get_schedule():
-#     data = request.json
-#     print("Received schedule request data:", data)  # Log the incoming data
-
-#     start_stop_name = data['start_stop']
-#     destination_stop_name = data['destination_stop']
-
-#     # Fetching stop IDs based on names
-#     start_stop_id = next((stop['stop_id'] for stop in stops_data if stop['stop_name'] == start_stop_name), None)
-#     destination_stop_id = next((stop['stop_id'] for stop in stops_data if stop['stop_name'] == destination_stop_name), None)
-
-#     print(f"Start stop ID: {start_stop_id}, Destination stop ID: {destination_stop_id}")
-
-#     valid_routes = []
-
-#     # Find routes that pass through both the starting stop and the destination stop
-#     for route_id, route_details in final_updated_routes_with_stops_data.items():
-#         if start_stop_name in route_details['stops'] and destination_stop_name in route_details['stops']:
-#             valid_routes.append(route_id)
-
-#     print(f"Valid routes: {valid_routes}")
-
-#     # Find departure times for each valid route from the starting stop
-#     schedules = []
-#     for route_id in valid_routes:
-#         # Find corresponding trip IDs for the route
-#         trip_ids = final_updated_routes_with_stops_data[route_id]['trip_ids']
-
-#         # Extract departure times for each trip from the starting stop
-#         departure_times = []
-#         for trip_id in trip_ids:
-#             if trip_id in stop_times_data:
-#                 for stop_time in stop_times_data[trip_id]:
-#                     if stop_time['stop_id'] == start_stop_id:
-#                         departure_times.append(stop_time['departure_time'])
-
-#         # Add the route and its departure times to the schedules list
-#         schedules.append({
-#             'route_name': final_updated_routes_with_stops_data[route_id]['route_long_name'],
-#             'departure_times': departure_times
-#         })
-
-#     print(f"Schedules: {schedules}")
-
-#     return jsonify(schedules)
 @app.route('/get_schedule', methods=['POST'])
 def get_schedule():
     data = request.json
