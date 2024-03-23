@@ -251,13 +251,18 @@ def search_routes():
    # ... in /search_routes
     response = []
     for route, eta_seconds in routes_with_etas.items():
-        eta_minutes = int(eta_seconds // 60)
-        eta_seconds_remainder = int(eta_seconds % 60)
-        readable_eta = f"{eta_minutes} min {eta_seconds_remainder} sec"
-        response.append({"route_name": route, "eta": readable_eta})  # Changed key to "route_name"
-
+        # Check if the ETA is negative, which means the bus has already departed
+        if eta_seconds < 0:
+            readable_eta = "Bus has departed"
+        else:
+            eta_minutes = int(eta_seconds // 60)
+            eta_seconds_remainder = int(eta_seconds % 60)
+            readable_eta = f"{eta_minutes} min {eta_seconds_remainder} sec"
+        
+        response.append({"route_name": route, "eta": readable_eta})
 
     return jsonify(response)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
