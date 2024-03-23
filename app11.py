@@ -133,7 +133,7 @@ def index():
     stop_names = [stop['stop_name'] for stop in stops_data]
 
     # Pass shapes_data to the template
-    return render_template('index10.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
+    return render_template('index11.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
 
 
 
