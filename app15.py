@@ -1073,39 +1073,6 @@ def get_next_bus_time(departure_times, current_time, eta_seconds):
     # Return the next bus time in '%H:%M:%S' format
     return next_bus_time.strftime('%H:%M:%S')
 
-
-#1243 1245 and bus departed, how know go
-#def get_next_bus_time(departure_times, current_time, eta_seconds):
-    """
-    Get the next bus time from the list of static times which is closest to the current time and after the current time.
-    If the current time is before the scheduled time and the ETA flips to negative,
-    it's assumed that the bus has departed early, and the next available time should be shown.
-    """
-    # Convert all times to datetime objects for comparison
-    current_time_dt = datetime.strptime(current_time, '%H:%M:%S')
-    departure_times_dt = sorted([datetime.strptime(time, '%H:%M:%S') for time in departure_times])
-    
-    # Identify the index of the current time in the sorted departure times list
-    current_time_index = next((i for i, time in enumerate(departure_times_dt) if time > current_time_dt), len(departure_times_dt))
-    
-    # If there are no future times, return the 'No more buses today' message
-    if current_time_index == len(departure_times_dt):
-        return "No more buses today"
-
-    # If the ETA is positive or if it just turned negative for the upcoming bus, we stick to the upcoming time
-    if eta_seconds >= 0 or (eta_seconds < 0 and current_time_dt < departure_times_dt[current_time_index]):
-        next_bus_time = departure_times_dt[current_time_index]
-    else:
-        # If the bus has left early, we take the next available time
-        if current_time_index + 1 < len(departure_times_dt):
-            next_bus_time = departure_times_dt[current_time_index + 1]
-        else:
-            # No more buses after this point
-            return "No more buses today"
-
-    # Return the next bus time in '%H:%M:%S' format
-    return next_bus_time.strftime('%H:%M:%S')
-
 @app.route('/search_routes', methods=['POST'])
 def search_routes():
     data = request.json
@@ -1183,7 +1150,7 @@ def search_routes():
         next_bus_arrival = get_next_bus_time(static_arrival_times, current_time, eta_seconds)
 
         # Append route name, ETA, and static arrival time of the next bus to the response
-        response.append({"route_name": route_long_name, "eta": readable_eta, "scheduled_arrival": next_bus_arrival})
+        response.append({"route_name": route_long_name, "eta": readable_eta, "scheduled_arrival": next_bus_arrival, "eta_seconds": eta_seconds, })
 
     return jsonify(response)
 

@@ -342,18 +342,20 @@ $(document).ready(function() {
                         
     if (data.length === 0) {
         routesList.append('<li>No available routes.</li>');
-    } else {
-        data.forEach(function(route) {
-            var etaText = route.eta_seconds < -1 ? "Waiting for update" : `${route.eta}`;
-            // Construct the HTML for each route with proper styling
-            var listItemHTML = `
-                <li>
-                    <span class="route_name">${route.route_name}</span> - 
-                    <span class="eta">Next Bus Scheduled Arrival: ${route.scheduled_arrival}</span> -
-                    <span class="eta">Next Bus ETA: ${route.eta} </span>
-                </li>`;
-            routesList.append(listItemHTML);
-        });
+    } else {data.forEach(function(route) {
+    // Check if eta_seconds is part of the route object and use it to determine the display text
+    var nextBusEtaText = route.eta_seconds < -25 ? "Waiting for update" : route.eta;
+    // Construct the HTML for each route with proper styling
+    var listItemHTML = `
+        <li>
+            <span class="route_name">${route.route_name}</span> - 
+            <span class="eta">Next Bus Scheduled Arrival: ${route.scheduled_arrival}</span> -
+            <span class="eta">Next Bus ETA: ${nextBusEtaText}</span>
+        </li>`;
+    routesList.append(listItemHTML);
+});
+
+
     }
 },
                     error: function(error) {
