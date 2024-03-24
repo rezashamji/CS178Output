@@ -952,7 +952,7 @@ def index():
     stop_names = [stop['stop_name'] for stop in stops_data]
 
     # Pass shapes_data to the template
-    return render_template('index.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
+    return render_template('index15.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
 
 
 def get_route_name_for_trip(trip_id):
@@ -1036,7 +1036,75 @@ def get_schedule():
 
     return jsonify(schedules)
 
+# Given the user's request to apply the logic from the '/get_schedule' endpoint to the '/search_routes' endpoint, 
+# let's define a function that will get the next bus time according to the logic specified.
 
+def get_next_bus_time(departure_times, current_time, eta_seconds):
+    """
+    Get the next bus time from the list of static times which is closest to the current time and after the current time.
+    If the next bus ETA indicates the bus has departed and current time is greater than or equal to the first future time,
+    it finds the second closest time. Otherwise, it picks the first closest future time.
+    """
+    # Convert all times to datetime objects for comparison
+    current_time_dt = datetime.strptime(current_time, '%H:%M:%S')
+    departure_times_dt = [datetime.strptime(time, '%H:%M:%S') for time in departure_times]
+    
+    # Filter out times that are in the past
+    future_times = [time for time in departure_times_dt if time > current_time_dt]
+    
+    # If there are no future times, return the 'No more buses today' message
+    if not future_times:
+        return "No more buses today"
+    
+    # Determine the index for the next bus time
+    if eta_seconds < 0 and len(future_times) > 1:
+        if current_time_dt >= future_times[0]:
+            # Current time is greater than or equal to the first future time, pick the second closest time
+            next_time_index = 1
+        else:
+            # Current time is less than the first future time, pick the closest time
+            next_time_index = 0
+    else:
+        # ETA is positive or there's only one future time, pick the closest time
+        next_time_index = 0
+    
+    next_bus_time = future_times[next_time_index]
+    
+    # Return the next bus time in '%H:%M:%S' format
+    return next_bus_time.strftime('%H:%M:%S')
+
+
+#1243 1245 and bus departed, how know go
+#def get_next_bus_time(departure_times, current_time, eta_seconds):
+    """
+    Get the next bus time from the list of static times which is closest to the current time and after the current time.
+    If the current time is before the scheduled time and the ETA flips to negative,
+    it's assumed that the bus has departed early, and the next available time should be shown.
+    """
+    # Convert all times to datetime objects for comparison
+    current_time_dt = datetime.strptime(current_time, '%H:%M:%S')
+    departure_times_dt = sorted([datetime.strptime(time, '%H:%M:%S') for time in departure_times])
+    
+    # Identify the index of the current time in the sorted departure times list
+    current_time_index = next((i for i, time in enumerate(departure_times_dt) if time > current_time_dt), len(departure_times_dt))
+    
+    # If there are no future times, return the 'No more buses today' message
+    if current_time_index == len(departure_times_dt):
+        return "No more buses today"
+
+    # If the ETA is positive or if it just turned negative for the upcoming bus, we stick to the upcoming time
+    if eta_seconds >= 0 or (eta_seconds < 0 and current_time_dt < departure_times_dt[current_time_index]):
+        next_bus_time = departure_times_dt[current_time_index]
+    else:
+        # If the bus has left early, we take the next available time
+        if current_time_index + 1 < len(departure_times_dt):
+            next_bus_time = departure_times_dt[current_time_index + 1]
+        else:
+            # No more buses after this point
+            return "No more buses today"
+
+    # Return the next bus time in '%H:%M:%S' format
+    return next_bus_time.strftime('%H:%M:%S')
 
 @app.route('/search_routes', methods=['POST'])
 def search_routes():
@@ -1084,9 +1152,14 @@ def search_routes():
 
     # Format the response to include route names and the earliest ETA for each route
    # ... in /search_routes
+    
     response = []
-    for route, eta_seconds in routes_with_etas.items():
-        # Check if the ETA is negative, which means the bus has already departed
+    for route_long_name, eta_seconds in routes_with_etas.items():
+        # Get the correct key for the route_long_name
+        route_key = next((key for key, value in final_updated_routes_with_stops_data.items() if value['route_long_name'] == route_long_name), None)
+        if route_key is None:
+            continue  # If no key is found, skip to the next route
+        
         if eta_seconds < 0:
             readable_eta = "Bus has departed"
         else:
@@ -1094,98 +1167,27 @@ def search_routes():
             eta_seconds_remainder = int(eta_seconds % 60)
             readable_eta = f"{eta_minutes} min {eta_seconds_remainder} sec"
         
-        # Find the static arrival time of the next bus from stop_times.json
-        # next_bus_arrival = None
-        # current_time = datetime.now().strftime('%H:%M:%S')
-        # for trip_id, stops in stop_times_data.items():
-        #     for stop in stops:
-        #         if stop['stop_id'] == start_stop_id and trip_id in valid_real_time_trip_ids:
-        #             arrival_time = stop['arrival_time']
-        #             if arrival_time >= current_time:  # Check if arrival time is in the future
-        #                 next_bus_arrival = arrival_time
-        #                 break
-        #     if next_bus_arrival:
-        #         break
-        # Find the static arrival time of the next bus from stop_times.json
-        # next_bus_arrival = None
-        # current_time = datetime.now().time()
-        # for trip_id, stops in stop_times_data.items():
-        #     for stop in stops:
-        #         if stop['stop_id'] == start_stop_id and trip_id in valid_real_time_trip_ids:
-        #             arrival_time = datetime.strptime(stop['arrival_time'], '%H:%M:%S').time()
-        #             if arrival_time >= current_time:  # Check if arrival time is in the future
-        #                 if next_bus_arrival is None or arrival_time < next_bus_arrival:
-        #                     next_bus_arrival = arrival_time
-        # scheduled_arrival = next_bus_arrival.strftime('%H:%M:%S') if next_bus_arrival else None
+        # Retrieve all static arrival times for the route from stop_times.json
+        static_arrival_times = []
+        for trip_id in final_updated_routes_with_stops_data[route_key]['trip_ids']:
+            if trip_id in stop_times_data:
+                static_arrival_times += [stop['arrival_time'] for stop in stop_times_data[trip_id] if stop['stop_id'] == start_stop_id]
         
-        # next_bus_arrival = None
-        # current_time = datetime.now().time()
-        # last_arrival_time = None  # Initialize variable to store the last known arrival time
+        # Sort the times and remove duplicates
+        static_arrival_times = sorted(set(static_arrival_times))
 
-        # for trip_id, stops in stop_times_data.items():
-        #     for stop in stops:
-        #         if stop['stop_id'] == start_stop_id and trip_id in valid_real_time_trip_ids:
-        #             arrival_time = datetime.strptime(stop['arrival_time'], '%H:%M:%S').time()
-        #             if arrival_time >= current_time:  # Check if arrival time is in the future
-        #                 if next_bus_arrival is None or arrival_time < next_bus_arrival:
-        #                     next_bus_arrival = arrival_time
-        #             # Update last_arrival_time regardless of whether it's in the future
-        #             last_arrival_time = arrival_time
+        # Get the current time in '%H:%M:%S' format
+        current_time = datetime.now().strftime('%H:%M:%S')
 
-        # # Set scheduled_arrival to last_arrival_time if next_bus_arrival is still None
-        # scheduled_arrival = next_bus_arrival.strftime('%H:%M:%S') if next_bus_arrival else last_arrival_time.strftime('%H:%M:%S') if last_arrival_time else None
-            
-        # next_bus_arrival = None
-        # current_time = datetime.now().time()
-        # last_arrival_time = None  # Initialize variable to store the last known arrival time
-
-        # for trip_id, stops in stop_times_data.items():
-        #     for stop in stops:
-        #         if stop['stop_id'] == start_stop_id and trip_id in valid_real_time_trip_ids:
-        #             arrival_time = datetime.strptime(stop['arrival_time'], '%H:%M:%S').time()
-        #             if arrival_time > current_time:  # Check if arrival time is strictly in the future
-        #                 if next_bus_arrival is None or arrival_time < next_bus_arrival:
-        #                     next_bus_arrival = arrival_time
-        #             # Update last_arrival_time regardless of whether it's in the future
-        #             last_arrival_time = arrival_time
-
-        # # Set scheduled_arrival to last_arrival_time if next_bus_arrival is still None
-        # scheduled_arrival = next_bus_arrival.strftime('%H:%M:%S') if next_bus_arrival else last_arrival_time.strftime('%H:%M:%S') if last_arrival_time else None
-        
-        next_bus_arrival = None
-        current_time = datetime.now().time()
-
-        # Get the last known arrival time before the current time
-        last_arrival_time = None
-        for trip_id, stops in stop_times_data.items():
-            for stop in stops:
-                if stop['stop_id'] == start_stop_id and trip_id in valid_real_time_trip_ids:
-                    arrival_time = datetime.strptime(stop['arrival_time'], '%H:%M:%S').time()
-                    if arrival_time < current_time:  # Check if arrival time is in the past
-                        if last_arrival_time is None or arrival_time > last_arrival_time:
-                            last_arrival_time = arrival_time
-
-        # If the current time is after the last known arrival time, find the next scheduled arrival after the current time
-        if current_time > last_arrival_time:
-            for trip_id, stops in stop_times_data.items():
-                for stop in stops:
-                    if stop['stop_id'] == start_stop_id and trip_id in valid_real_time_trip_ids:
-                        arrival_time = datetime.strptime(stop['arrival_time'], '%H:%M:%S').time()
-                        if arrival_time > current_time:  # Check if arrival time is in the future
-                            if next_bus_arrival is None or arrival_time < next_bus_arrival:
-                                next_bus_arrival = arrival_time
-
-        # Set the scheduled arrival time
-        scheduled_arrival = next_bus_arrival.strftime('%H:%M:%S') if next_bus_arrival else last_arrival_time.strftime('%H:%M:%S') if last_arrival_time else None
+        # Use the new function to get the next bus arrival time
+        next_bus_arrival = get_next_bus_time(static_arrival_times, current_time, eta_seconds)
 
         # Append route name, ETA, and static arrival time of the next bus to the response
-        response.append({"route_name": route, "eta": readable_eta, "scheduled_arrival": scheduled_arrival})
-
+        response.append({"route_name": route_long_name, "eta": readable_eta, "scheduled_arrival": next_bus_arrival})
 
     return jsonify(response)
 
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 

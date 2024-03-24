@@ -134,7 +134,7 @@ def index():
     stop_names = [stop['stop_name'] for stop in stops_data]
 
     # Pass shapes_data to the template
-    return render_template('index.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
+    return render_template('index14.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
 
 
 def get_route_name_for_trip(trip_id):
@@ -267,6 +267,8 @@ def search_routes():
     # Format the response to include route names and the earliest ETA for each route
    # ... in /search_routes
     response = []
+    current_time = datetime.now().time()  # Get current time without date
+
     for route, eta_seconds in routes_with_etas.items():
         # Check if the ETA is negative, which means the bus has already departed
         if eta_seconds < 0:
@@ -288,6 +290,17 @@ def search_routes():
                         break
             if next_bus_arrival:
                 break
+        
+        # Find the next static arrival time of the bus
+        future_stop_times = [stop for stop in stop_times_data.get(trip_id, []) if stop['stop_id'] == start_stop_id]
+        # Sort future_stop_times by arrival_time
+        future_stop_times.sort(key=lambda x: x['arrival_time'])
+        # Get the next arrival time that is greater than the current time
+        next_bus_arrival = next((stop['arrival_time'] for stop in future_stop_times if datetime.strptime(stop['arrival_time'], '%H:%M:%S').time() > current_time), None)
+
+        # If no more buses are scheduled for today, we might set a placeholder or look for the first bus of the next day
+        if not next_bus_arrival:
+            next_bus_arrival = "No more buses today"
 
         # Append route name, ETA, and static arrival time of the next bus to the response
         response.append({"route_name": route, "eta": readable_eta, "scheduled_arrival": next_bus_arrival})
