@@ -1158,7 +1158,7 @@
 </body>
 </html> -->
 
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1391,6 +1391,468 @@
 
         updateBusLocations();
         setInterval(updateBusLocations, 5000);
+
+
+        // Display routes
+        {% for shape_id, shape_points in shapes_data.items() %}
+            var lineCoordinates{{ loop.index }} = [
+                {% for point in shape_points %}
+                    [{{ point['shape_pt_lat'] }}, {{ point['shape_pt_lon'] }}],
+                {% endfor %}
+            ];
+            L.polyline(lineCoordinates{{ loop.index }}, { color: 'green' }).addTo(map);
+        {% endfor %}
+
+        // Display stops as circles
+        {% for stop in stops_data %}
+            var stopMarker = L.circleMarker([{{ stop['stop_lat'] }}, {{ stop['stop_lon'] }}], {
+                radius: 5, 
+                color: 'blue', 
+                fillOpacity: 1 
+            }).addTo(map);
+            // Bind popup (to display stop name on hover)
+            stopMarker.bindPopup('{{ stop['stop_name'] }}');
+            stopMarkers.push(stopMarker);
+        {% endfor %}
+    </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Navigation Platform</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
+    <style>
+
+
+:root {
+    --primary-color: #A51C30; /* Harvard Crimson */
+    --primary-dark: #690F1D; /* Even darker shade of Harvard Crimson for hover effect */
+    --secondary-color: #000000; /* Black */
+    --accent-color: #FFFFFF; /* White */
+    --neutral-light: #FFFFFF; /* White */
+    --neutral-dark: #000000; /* Black */
+    --font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    --header-font-family: 'Georgia', 'Times New Roman', serif; /* A more formal font for headers, optional */
+}
+
+body {
+    background-color: var(--neutral-light);
+    color: var(--neutral-dark);
+    font-family: var(--font-family);
+    font-size: 16px; /* Adjust as needed */
+    line-height: 1.6; /* Adjust as needed */
+}
+
+h1 {
+    width: 100%; /* Ensures the title takes full width of the sidebar container */
+    text-align: center;
+    
+    padding: 20px 0; /* Gives some space above and below the title padding: 0.5em 0;*/ 
+    margin: 0; /* Remove default margins */
+    /* ... other styles ... */
+
+    font-family: var(--header-font-family);
+    color: var(--primary-color);
+    font-size: 3em; /* Adjust the value as needed to make it bigger */
+    font-weight: bold;
+   /* margin-bottom: 0.5em; */
+    text-align: center; /* Optional: if you want to center the title */
+}
+
+
+h2, h3, label {
+    font-family: var(--header-font-family);
+    color: var(--primary-color);
+    margin-bottom: 0.75em;
+}
+
+button {
+    font-family: var(--font-family);
+    font-size: 1em; /* Adjust as needed */
+    letter-spacing: 0.05em;
+    text-transform: uppercase; /* Optional: if you want to have button text in uppercase */
+    padding: 10px 15px; /* Adjust padding to ensure buttons are clickable and look proportional */
+    border-radius: 4px; /* Optional: if you prefer rounded buttons */
+    transition: background-color 0.3s ease; /* For a smooth hover transition */
+}
+
+#schedule-btn:hover {
+    background-color: #505050; /* Dark grey color */
+    color: var(--accent-color); /* Keep the text color white */
+    /* Add any additional styles you might want on hover */
+}
+.dropdown-container {
+
+    width: 40%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+#search-btn {
+    background-color: var(--primary-color);
+    color: var(--accent-color);
+    border: none; /* Assuming no border is desired */
+    /* Add more styles if needed */
+}
+
+#search-btn:hover {
+    background-color: var(--primary-dark); /* Darker crimson on hover */
+    /* You may remove the border if you prefer no border on hover as well */
+}
+
+.btn-primary {
+    background-color: var(--secondary-color);
+    color: var(--accent-color);
+}
+
+.btn-primary:hover {
+    background-color: lighten(var(--secondary-color), 10%);
+}
+
+/* Map styles */
+#map {
+    height: 100vh; /* Set the height of the map to full viewport height */
+    width: 60%; /* Set the width of the map to 60% of the viewport width */
+    position: absolute; /* Use absolute positioning */
+    top: 0; /* Align to the top */
+    right: 0; /* Align to the right side */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    /*border-radius: 8px; */
+    z-index: 1; /* Behind the sidebar */
+    border-radius: 0 8px 8px 0; /* Only round the right corners */
+}
+
+/* Add styles for other elements if needed */
+
+
+/* ... additional styles ... */
+
+/* Add styles for other elements if needed */
+
+        .bus-info-container {
+            display: none; 
+            width: 25%; 
+            float: left; 
+            clear: left; 
+        }
+        .dropdown {
+            width: 50%; 
+            margin-bottom: 20px;
+        }
+        label {
+            display: block; 
+            margin-bottom: 10px; 
+            font-size: 16px; 
+        }
+        select {
+            width: 100%; 
+            font-size: 16px; 
+        }
+        .bus-card {
+            margin-bottom: 20px; 
+            width: auto; 
+        }
+
+        #routes-container {
+    background-color: var(--neutral-light); /* Light background for the area */
+    border: 2px solid var(--primary-color); /* Crimson border */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    padding: 20px; /* Spacing inside the box */
+    margin-top: 1em; /* Space from the above elements */
+    width: calc(100% - 40px); /* Adjust width based on padding */
+    box-sizing: border-box; /* Include padding and border in the width */
+}
+
+#routes-container h3 {
+    color: var(--primary-color); /* Crimson color for the title */
+    margin-top: 0; /* Remove default margin */
+    margin-bottom: 16px; /* Space before the list starts */
+    padding-bottom: 5px; /* Small padding for the underline */
+    border-bottom: 3px solid var(--primary-color); /* Underline effect */
+    text-align: left; /* Align to the left */
+    width: 100%; /* Full width */
+    box-sizing: border-box; /* Include padding in the width calculation */
+}
+
+#routes-list {
+    list-style-type: none; /* Remove bullet points */
+    padding: 0; /* Remove default padding */
+    margin: 0; /* Remove default margin */
+    text-align: left; /* Align text to the left */
+    font-size: 1em; /* Adjust font size as needed */
+}
+#routes-list li {
+    background-color: #f7f7f7; /* A light gray that is just off-white */
+    color: var(--secondary-color); /* Black text color for readability */
+    border-radius: 4px; /* Rounded corners for each list item */
+    padding: 10px; /* Padding inside each list item */
+    margin-bottom: 8px; /* Space between list items */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+}
+
+#routes-list li:hover {
+    background-color: #eeeeee; /* A slightly darker shade for hover state */
+}
+
+/* Style for the route name */
+#routes-list li .route_name {
+    font-weight: bold; /* Make route name bold */
+    display: block; /* Use block to allow width manipulation */
+    color: var(--primary-color); /* Use the primary crimson color */
+}
+
+/* Style for the ETA */
+#routes-list li .eta {
+    font-size: 0.9em; /* Slightly smaller font size for ETA */
+    color: var(--primary-dark); /* Darker text for contrast */
+    margin-top: 5px; /* Space from the route name */
+}
+
+/* Remove the last list item's bottom border */
+#routes-list li:last-child {
+    border-bottom: none;
+}
+
+    </style>
+</head>
+
+<body>
+
+    
+
+
+    <div class="dropdown-container">
+        <h1>CrimGo</h1>
+        <div class="dropdown">
+            <label for="start-stop">Starting Stop:</label>
+            <select id="start-stop">
+                <option value="" disabled selected>Starting Stop</option> 
+                {% for stop_name in stop_names %}
+                    <option value="{{ stop_name }}">{{ stop_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="dropdown">
+            <label for="destination-stop">Destination Stop:</label>
+            <select id="destination-stop">
+                <option value="" disabled selected>Destination Stop</option> 
+                {% for stop_name in stop_names %}
+                    <option value="{{ stop_name }}">{{ stop_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button id="search-btn" class="btn btn-danger">Search</button>
+
+        <div id="routes-container">
+            <h3>Available Routes</h3>
+            <ul id="routes-list"></ul>
+            
+        </div>
+    
+    </div>
+
+
+    <div id="schedule-container" style="position: absolute; bottom: 20px; left: 20px;">
+        <button id="schedule-btn" class="btn btn-primary">
+            <i class="fas fa-calendar-alt"></i> Show Schedule
+        </button>
+    </div>
+
+    <div class="modal fade" id="schedule-modal" tabindex="-1" role="dialog" aria-labelledby="schedule-modal-label" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="schedule-modal-label">Bus Schedule</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="schedule-modal-body">
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="map">{{ map | safe }}</div>
+
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    
+    <script>
+
+
+        var map = L.map('map').setView([42.373611, -71.109733], 13.5);
+        L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://carto.com/">Carto</a>'
+        }).addTo(map);
+        function showUserLocation() {
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) { // Success callback
+                var userLat = position.coords.latitude;
+                var userLng = position.coords.longitude;
+                console.log("User's location: ", position.coords); // Corrected line
+
+                L.marker([userLat, userLng]).addTo(map)
+                    .bindPopup('You are here')
+                    .openPopup();
+
+                map.setView([userLat, userLng], 13.5);
+            },
+            function(error) { // Error callback
+                console.error("Error getting user's location: ", error);
+                // You can still set a default view if you wish
+                map.setView([42.373611, -71.109733], 13.5);
+            }
+            
+        );
+    } else {
+        console.log('Geolocation is not supported by this browser.');
+        // You can set a default view
+        map.setView([42.373611, -71.109733], 13.5);
+    }
+}
+
+$(document).ready(function() {
+    showUserLocation(); // Call the function to show the user's location
+    // You can add other operations you need to perform when document is ready
+});
+
+        var busMarkers = [];
+        var stopMarkers = [];
+
+
+        $(document).ready(function() {
+            var autoRefreshInterval;
+    var isIntervalSet = false; // Flag to check if interval is set
+
+        $('#search-btn').click(function() {
+            console.log('Search button clicked'); 
+            var startStop = $('#start-stop').val();
+            var destinationStop = $('#destination-stop').val();
+            if (startStop && destinationStop) {
+                $.ajax({
+                    url: '/search_routes',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 'start_stop': startStop, 'destination_stop': destinationStop }),
+                    success: function(data) {
+    console.log('Routes:', data);
+    var routesList = $('#routes-list');
+    routesList.empty(); // Clear existing list items
+
+    if (data.length === 0) {
+        routesList.append('<li>No available routes.</li>');
+    } else {
+        data.forEach(function(route) {
+            // Construct the HTML for each route with proper styling
+            var listItemHTML = `
+                <li>
+                    <span class="route_name">${route.route_name}</span> - 
+                    <span class="eta">Scheduled Arrival: ${route.scheduled_arrival}</span> -
+                    <span class="eta">Next Bus ETA: ${route.eta} </span>
+                </li>`;
+            routesList.append(listItemHTML);
+        });
+    }
+},
+                    error: function(error) {
+                        console.error('Error searching routes:', error);
+                    }
+                });
+            }
+            if (!isIntervalSet) {
+            // Set the interval to automatically refresh every 30 seconds
+            autoRefreshInterval = setInterval(function() {
+                $('#search-btn').click();
+            }, 15000); // 15000 milliseconds = 15 seconds
+
+            isIntervalSet = true; // Set the flag to true
+        }  })
+        ;
+    });
+
+
+    $(document).ready(function() {
+        $('#schedule-btn').click(function() {
+            var startStop = $('#start-stop').val();
+            var destinationStop = $('#destination-stop').val();
+            if (startStop && destinationStop) {
+                $.ajax({
+                    url: '/get_schedule',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 'start_stop': startStop, 'destination_stop': destinationStop }),
+                    success: function(data) {
+                        console.log('Schedule:', data);
+                        var scheduleModalBody = $('#schedule-modal-body');
+                        scheduleModalBody.empty();
+
+                        if (data.length === 0) {
+                            scheduleModalBody.append('<p>No schedule available.</p>');
+                        } else {
+                            data.forEach(function(route) {
+                                scheduleModalBody.append(`<p>${route.route_name}: ${route.departure_times.join(', ')}</p>`);
+                            });
+                        }
+
+                        $('#schedule-modal').modal('show'); // Show the modal
+                    },
+                    error: function(error) {
+                        console.error('Error fetching schedule:', error);
+                    }
+                });
+            }
+        });
+    });
+
+    function updateBusLocations() {
+        fetch('/get_bus_data')
+        .then(response => response.json())
+        .then(data => {
+            console.log("Bus Data:", data);
+            // Clear existing bus markers
+            busMarkers.forEach(marker => {
+                map.removeLayer(marker);
+            });
+            busMarkers = [];
+            // Add new bus markers
+            data.forEach(bus => { 
+                var popupContent = `<b>Route Name:</b> ${bus.route_name}`;
+                // Create marker with popup content
+                var marker = L.marker([bus.latitude, bus.longitude], {
+                    icon: L.icon({
+                        iconUrl: 'https://cdn-icons-png.freepik.com/512/3448/3448339.png',
+                        iconSize: [35, 40],
+                        iconAnchor: [12, 41],
+                        className: 'marker-icon bus-marker'
+                    })
+                }).addTo(map).bindPopup(popupContent);
+                busMarkers.push(marker);
+            });
+        })
+        .catch(error => console.error('Error fetching bus data:', error));
+    }
+    updateBusLocations();
+    setInterval(updateBusLocations, 5000);
 
 
         // Display routes
