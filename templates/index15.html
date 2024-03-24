@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -338,11 +339,12 @@ $(document).ready(function() {
     console.log('Routes:', data);
     var routesList = $('#routes-list');
     routesList.empty(); // Clear existing list items
-
+                        
     if (data.length === 0) {
         routesList.append('<li>No available routes.</li>');
     } else {
         data.forEach(function(route) {
+            var etaText = route.eta_seconds < -1 ? "Waiting for update" : `${route.eta}`;
             // Construct the HTML for each route with proper styling
             var listItemHTML = `
                 <li>
