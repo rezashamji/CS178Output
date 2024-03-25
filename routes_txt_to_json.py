@@ -1,17 +1,15 @@
 import csv
 import json
 
-# Adjusting the file path for the input TXT file
-csv_file_path = 'routes.txt'  # Updated file path with .txt extension
+#adjusting the path for the input txt file
+csv_file_path = 'routes.txt'
 json_file_path = 'routes.json'
 
-# Placeholder for routes data
 routes_data = {}
 
-with open(csv_file_path, mode='r', encoding='utf-8') as csvfile:
+with open(csv_file_path, mode='r', encoding='utf-8') as csvfile: #Chat GPT helped me with logic behind this open function and how to convert text to json as it does in the for loop below
     reader = csv.DictReader(csvfile)
     for row in reader:
-        # Assuming route_short_name is unique and used as key; otherwise, use route_id
         key = row['route_short_name'] if row['route_short_name'] else row['route_long_name']
         routes_data[key] = {
             "route_id": row['route_id'],
@@ -20,12 +18,10 @@ with open(csv_file_path, mode='r', encoding='utf-8') as csvfile:
             "route_type": row['route_type'],
             "route_color": row['route_color'],
             "route_text_color": row['route_text_color'],
-            # Placeholder for stops and trips, assuming they would be added from another source
             "stops": [],
             "trip_ids": []
         }
 
-# Convert to JSON
 with open(json_file_path, 'w', encoding='utf-8') as jsonfile:
     json.dump(routes_data, jsonfile, indent=4)
 

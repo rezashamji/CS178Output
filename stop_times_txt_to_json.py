@@ -1,11 +1,9 @@
 import csv
 import json
 
-# Adjusting the file path for the input TXT file
-txt_file_path = 'stop_times.txt'  # The input file in TXT format
-json_file_path = 'stop_times.json'  # The output file in JSON format
+txt_file_path = 'stop_times.txt'
+json_file_path = 'stop_times.json'
 
-# Placeholder for stop times data
 stop_times_data = {}
 
 with open(txt_file_path, mode='r', encoding='utf-8') as txtfile:
@@ -26,11 +24,9 @@ with open(txt_file_path, mode='r', encoding='utf-8') as txtfile:
         }
         stop_times_data[trip_id].append(stop_time_details)
 
-# Sorting the stop times by sequence within each trip_id
 for trip_id, times in stop_times_data.items():
     stop_times_data[trip_id] = sorted(times, key=lambda k: k['stop_sequence'])
 
-# Convert to JSON
 with open(json_file_path, 'w', encoding='utf-8') as jsonfile:
     json.dump(stop_times_data, jsonfile, indent=4)
 

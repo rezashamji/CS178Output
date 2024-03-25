@@ -1,11 +1,9 @@
 import csv
 import json
 
-# Adjusting the file path for the input TXT file
-txt_file_path = 'stops.txt'  # The input file in TXT format
-json_file_path = 'stops.json'  # The output file in JSON format
+txt_file_path = 'stops.txt' 
+json_file_path = 'stops.json' 
 
-# Placeholder for stops data
 stops_data = []
 
 with open(txt_file_path, mode='r', encoding='utf-8') as txtfile:
@@ -26,7 +24,6 @@ with open(txt_file_path, mode='r', encoding='utf-8') as txtfile:
         }
         stops_data.append(stop_details)
 
-# Convert to JSON
 with open(json_file_path, 'w', encoding='utf-8') as jsonfile:
     json.dump(stops_data, jsonfile, indent=4)
 
