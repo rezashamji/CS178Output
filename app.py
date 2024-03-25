@@ -7,22 +7,22 @@ from datetime import datetime, timezone
 app = Flask(__name__)
 
 #the four following files were text files that were converted to JSON files for easier use, organization, and objects
-with open('routes.json', 'r') as f:
+with open('json/routes.json', 'r') as f:
     routes_data = json.load(f)
 
-with open('stops.json', 'r') as f:
+with open('json/stops.json', 'r') as f:
     stops_data = json.load(f)
 
-with open('shapes.json', 'r') as f:
+with open('json/shapes.json', 'r') as f:
     shapes_data = json.load(f)
 
-with open('stop_times.json', 'r') as f:
+with open('json/stop_times.json', 'r') as f:
     stop_times_data = json.load(f)
 
 #created a json file which is the routes.json file with enhancements
 #(stop_id array and trip_id *using trips.json which is made from trips text file* array for each bus populated)
 #called final_updated_routes_with_stops
-with open('final_updated_routes_with_stops.json', 'r') as f:
+with open('json/final_updated_routes_with_stops.json', 'r') as f:
     final_updated_routes_with_stops_data = json.load(f)
 
 def fetch_data(url):
