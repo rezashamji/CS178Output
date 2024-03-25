@@ -1,7 +1,6 @@
 import json
 
 def main():
-    # Load the necessary files
     with open('updated_routes_with_stops_and_trips.json', 'r') as file:
         routes_data = json.load(file)
 
