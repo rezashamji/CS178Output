@@ -113,7 +113,7 @@ def index():
     stop_names = [stop['stop_name'] for stop in stops_data]
 
     #rendering all the data necessary to be shown on UI
-    return render_template('index.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
+    return render_template('index_draft.html', map=map_html, stop_names=stop_names, shapes_data=shapes_data, stops_data=stops_data)
 
 
 def get_route(trip_id):
@@ -191,17 +191,14 @@ def get_schedule():
     return jsonify(schedules)
 
 def get_next_bus(departure_times, current_time, eta_seconds):
-    #accounts for when it is past midnight to go from 24 to 00, as datetime objects do
-    adjusted_times = [time.replace('24:', '00:') for time in departure_times]
     #all times datetime objects for easy comparison within function
     current_time_datetime = datetime.strptime(current_time, '%H:%M:%S')
-    departure_times_datetime = [datetime.strptime(time, '%H:%M:%S') for time in adjusted_times]
+    departure_times_datetime = [datetime.strptime(time, '%H:%M:%S') for time in departure_times]
     
     #Chat GPT helped translate my hope to create two possibilities of "future_times" based off of the condition eta_seconds < 0, into the conditional logic below
     #eta_seconds < 0 mean that the bus has departed, the bus has left
     if eta_seconds < 0:
-        #future_times only consists of times which are greater than the current time if eta_seconds < 0
-        future_times = [time for time in departure_times_datetime if time > current_time_datetime]
+        future_times = [time for time in departure_times_datetime if time > current_time_datetime] #future_times only consists of times which are greater than the current time if eta_seconds < 0
     else:
         #if bus hasn't departed, include time closest to current_time even if it's in the "past" because this means that the bus is late
         future_times = [time for time in departure_times_datetime if time >= current_time_datetime]
@@ -250,7 +247,7 @@ def search_routes():
                 route_name = route_details['route_long_name']
                 eta_seconds = etas.get(trip_id)
                 if eta_seconds is not None:
-                    if route_name not in routes_with_etas or eta_seconds < routes_with_etas[route_name]:
+                    if eta_seconds < routes_with_etas[route_name] or route_name not in routes_with_etas:
                         routes_with_etas[route_name] = eta_seconds  #earliest ETA
     
     response = []

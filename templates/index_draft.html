@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -105,6 +106,30 @@ button {
     border-radius: 0 8px 8px 0;
 }
 
+.bus-info-container {
+    display: none; 
+    width: 25%; 
+    float: left; 
+    clear: left; 
+}
+.dropdown {
+    width: 50%; 
+    margin-bottom: 20px;
+}
+label {
+    display: block; 
+    margin-bottom: 10px; 
+    font-size: 16px; 
+}
+select {
+    width: 100%; 
+    font-size: 16px; 
+}
+.bus-card {
+    margin-bottom: 20px; 
+    width: auto; 
+}
+
 #routes-container {
     background-color: var(--neutral-light);
     border: 2px solid var(--primary-color);
@@ -114,7 +139,7 @@ button {
     margin-top: 1em;
     width: calc(100% - 40px); /* This adjusts the width based on padding */
     box-sizing: border-box;
-}
+
 #routes-container h3 {
     color: var(--primary-color);
     margin-top: 0;
@@ -161,30 +186,6 @@ button {
 
 #routes-list li:last-child {
     border-bottom: none;
-}
-
-.bus-info-container {
-    display: none; 
-    width: 25%; 
-    float: left; 
-    clear: left; 
-}
-.dropdown {
-    width: 50%; 
-    margin-bottom: 20px;
-}
-label {
-    display: block; 
-    margin-bottom: 10px; 
-    font-size: 16px; 
-}
-select {
-    width: 100%; 
-    font-size: 16px; 
-}
-.bus-card {
-    margin-bottom: 20px; 
-    width: auto; 
 }
 
 </style>
