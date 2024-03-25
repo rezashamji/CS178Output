@@ -6,7 +6,7 @@ json_file_path = 'shapes.json'
 
 shapes_data = {}
 
-with open(txt_file_path, mode='r', encoding='utf-8') as txtfile: #Chat GPT helped me with logic behind this open function and how to convert text to json as it does in the for loop below
+with open(txt_file_path, mode='r', encoding='utf-8') as txtfile: #Chat GPT helped with logic behind this open function and how to convert text to json as it does in the for loop below
     reader = csv.DictReader(txtfile)
     for row in reader:
         shape_id = row['shape_id']

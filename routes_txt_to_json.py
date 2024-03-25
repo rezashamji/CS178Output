@@ -7,7 +7,7 @@ json_file_path = 'routes.json'
 
 routes_data = {}
 
-with open(csv_file_path, mode='r', encoding='utf-8') as csvfile: #Chat GPT helped me with logic behind this open function and how to convert text to json as it does in the for loop below
+with open(csv_file_path, mode='r', encoding='utf-8') as csvfile: #Chat GPT helped with logic behind this open function and how to convert text to json as it does in the for loop below
     reader = csv.DictReader(csvfile)
     for row in reader:
         key = row['route_short_name'] if row['route_short_name'] else row['route_long_name']
